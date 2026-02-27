@@ -1,0 +1,27 @@
+services:
+  monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: home-network-monitor
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PORT=3000
+      - DB_PATH=/app/data/monitor.db
+      # Optional: comma-separated list of hosts to check SSL certs for
+      # - SSL_HOSTS=google.com,cloudflare.com,github.com
+      # Optional: iperf3 server address
+      # - IPERF3_SERVER=your-server-ip
+    cap_add:
+      - NET_RAW       # Required for ICMP ping
+      - NET_ADMIN     # Required for some network operations
+    network_mode: host  # Better for detecting gateway, traceroute, etc.
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
