@@ -167,6 +167,10 @@ CREATE TABLE ssl_checks (
   days_remaining INTEGER,
   status TEXT NOT NULL CHECK(status IN ('ok','warning','expired','error')),
   -- warning threshold: 30 days (changed from 14)
+  tls_version TEXT,   -- e.g. 'TLSv1.2', 'TLSv1.3' — populated by misc.ts SSL checker
+  -- Corresponding TypeScript interface (existing SslCheck + new field):
+  -- interface SslCheck { host: string; expiresAt: number | null; daysRemaining: number | null;
+  --   status: 'ok'|'warning'|'expired'|'error'; tlsVersion: string | null; error: string | null; timestamp: number }
   error TEXT,
   timestamp INTEGER NOT NULL
 );
@@ -214,6 +218,14 @@ CREATE TABLE dns_extra_checks (
   nxdomain TEXT NOT NULL CHECK(nxdomain IN ('ok','fail')),
   hijacking TEXT NOT NULL CHECK(hijacking IN ('ok','hijacked','unknown')),
   doh TEXT NOT NULL CHECK(doh IN ('ok','fail','unknown')),
+  dns_leak TEXT NOT NULL CHECK(dns_leak IN ('ok','leak','unknown')) DEFAULT 'unknown',
+  timestamp INTEGER NOT NULL
+);
+
+CREATE TABLE os_resolver_checks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  status TEXT NOT NULL CHECK(status IN ('ok','fail')),
+  nameservers TEXT NOT NULL,  -- JSON array of strings: ["1.1.1.1", "8.8.8.8"]
   timestamp INTEGER NOT NULL
 );
 
@@ -265,6 +277,7 @@ interface StatusResponse {
 
   // ── New ───────────────────────────────────────────────────
   interface: InterfaceCheck | null;
+  gateway: GatewayCheck | null;        // computed from ping_results for gateway target, no dedicated table
   tcpConnect: TcpConnectResult | null;
   dnsExtra: DnsExtraCheck | null;
   captivePortal: CaptivePortalCheck | null;
@@ -302,6 +315,7 @@ interface DnsExtraCheck {
   nxdomain: 'ok' | 'fail';
   hijacking: 'ok' | 'hijacked' | 'unknown';
   doh: 'ok' | 'fail' | 'unknown';
+  dnsLeak: 'ok' | 'leak' | 'unknown';
   timestamp: number;
 }
 
@@ -327,6 +341,15 @@ interface OsResolverCheck {
   timestamp: number;
 }
 
+// GatewayCheck — не хранится в отдельной таблице.
+// Вычисляется в /api/status на лету из ping_results за последние 15 мин
+// для таргета, совпадающего с определённым gateway IP.
+// jitterMs = σ(RTT) по последним N записям, timestamp = max(timestamp) среди записей.
+interface GatewayCheck {
+  jitterMs: number | null;
+  timestamp: number;
+}
+
 interface PingStatsCheck {
   targets: {
     [target: string]: {
@@ -338,6 +361,20 @@ interface PingStatsCheck {
   timestamp: number;
 }
 ```
+
+### `WS /ws` — Event Format
+
+Фронтенд подписывается на WebSocket и ре-фетчит `/api/status` при любом событии. Структура сообщения минимальная:
+
+```ts
+interface WsMessage {
+  event: 'ping' | 'dns' | 'http' | 'traceroute' | 'speedtest' | 'publicip'
+       | 'interface' | 'system' | 'misc';
+  timestamp: number;
+}
+```
+
+Фронтенд не использует поле `event` для логики — любое сообщение вызывает ре-фетч `/api/status`. Поле `event` полезно для отладки в DevTools.
 
 ---
 
@@ -417,6 +454,9 @@ export function evaluate(s: StatusResponse): DiagnosticRule[] {
 # Triggers:
 #   push to main  → builds and pushes :latest
 #   push tag v*   → builds and pushes :vX.Y.Z AND updates :latest
+#
+# Dockerfile — multi-stage, собирает frontend и backend самостоятельно.
+# Отдельного pre-build шага не нужно.
 
 name: Build and Push Docker Image
 
@@ -433,11 +473,6 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - name: Build frontend
-        run: |
-          bun install
-          cd frontend && bun run build
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -474,11 +509,15 @@ git push origin v1.0.0
 
 ```dockerfile
 # Stage 1: Build frontend
+# Использует единый root package.json (все зависимости в одном месте)
 FROM oven/bun:1-alpine AS frontend-builder
-WORKDIR /app/frontend
-COPY frontend/ .
-COPY .npmrc /root/
-RUN bun install && bun run build
+WORKDIR /app
+COPY package.json .npmrc ./
+RUN bun install
+COPY frontend/ ./frontend/
+# root script "build" запускает: vite build --config frontend/vite.config.ts
+# output идёт в backend/public/ (задано в frontend/vite.config.ts)
+RUN bun run build
 
 # Stage 2: Backend runtime
 FROM oven/bun:1-alpine
@@ -486,17 +525,17 @@ WORKDIR /app
 
 # Install system tools for checkers
 RUN apk add --no-cache \
-  iproute2 \       # ip link, ip addr, ip route
-  iputils \        # ping with -M do (DF bit)
-  bind-tools \     # dig
-  traceroute \     # traceroute
-  libcap            # (if needed for capabilities)
+  iproute2 \
+  iputils \
+  bind-tools \
+  traceroute
+
+# Только production зависимости (hono, drizzle-orm, speedtest-net)
+COPY package.json .npmrc ./
+RUN bun install --production
 
 COPY backend/ ./backend/
-COPY .npmrc /root/
-RUN cd backend && bun install
-
-COPY --from=frontend-builder /app/frontend/../backend/public ./backend/public
+COPY --from=frontend-builder /app/backend/public ./backend/public
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s \
@@ -525,6 +564,7 @@ const RETENTION = {
   tcp_connect_results:    30 * 24 * 60 * 60 * 1000,
   dns_extra_checks:       30 * 24 * 60 * 60 * 1000,
   ntp_checks:             30 * 24 * 60 * 60 * 1000,
+  os_resolver_checks:     30 * 24 * 60 * 60 * 1000,
   speedtest_results:      90 * 24 * 60 * 60 * 1000,  // 90 days
   public_ip_events:       90 * 24 * 60 * 60 * 1000,
   ssl_checks:             90 * 24 * 60 * 60 * 1000,

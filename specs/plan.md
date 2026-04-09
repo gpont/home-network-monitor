@@ -136,7 +136,7 @@ git commit -m "feat: configurable ping/dns/http targets via env vars"
 - Modify: `backend/src/db/schema.ts`
 - Modify: `backend/src/db/client.ts`
 
-- [ ] Add 6 new table definitions to `schema.ts` (copy exact SQL from `specs/arch.md` section 3, translate to Drizzle DSL):
+- [ ] Add 7 new table definitions to `schema.ts` (copy exact SQL from `specs/arch.md` section 3, translate to Drizzle DSL). Таблицы: `interface_checks`, `tcp_connect_results`, `dns_extra_checks` (с полем `dnsLeak`), `captive_portal_checks`, `http_redirect_checks`, `ntp_checks`, `os_resolver_checks`:
 
 ```ts
 // interface_checks
@@ -171,6 +171,7 @@ export const dnsExtraChecks = sqliteTable("dns_extra_checks", {
   nxdomain: text("nxdomain", { enum: ["ok", "fail"] }).notNull(),
   hijacking: text("hijacking", { enum: ["ok", "hijacked", "unknown"] }).notNull(),
   doh: text("doh", { enum: ["ok", "fail", "unknown"] }).notNull(),
+  dnsLeak: text("dns_leak", { enum: ["ok", "leak", "unknown"] }).notNull().default("unknown"),
   timestamp: integer("timestamp").notNull(),
 });
 
@@ -192,7 +193,16 @@ export const ntpChecks = sqliteTable("ntp_checks", {
   driftMs: integer("drift_ms"),
   timestamp: integer("timestamp").notNull(),
 });
+
+export const osResolverChecks = sqliteTable("os_resolver_checks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  status: text("status", { enum: ["ok", "fail"] }).notNull(),
+  nameservers: text("nameservers").notNull(),  // JSON array: '["1.1.1.1","8.8.8.8"]'
+  timestamp: integer("timestamp").notNull(),
+});
 ```
+
+> **Примечание:** таблиц теперь 7 новых (не 6 как написано выше). Добавлена `os_resolver_checks` для хранения состояния `/etc/resolv.conf`.
 
 - [ ] Also add `hasBlackHole` field to `tracerouteResults`:
 ```ts
@@ -206,7 +216,7 @@ hasBlackHole: integer("has_black_hole", { mode: "boolean" }).notNull().default(f
 - [ ] Commit:
 ```bash
 git add backend/src/db/schema.ts backend/src/db/client.ts
-git commit -m "feat: add 6 new DB tables for extended checks"
+git commit -m "feat: add 7 new DB tables for extended checks"
 ```
 
 ---
@@ -266,7 +276,7 @@ import { lt } from "drizzle-orm";
 import {
   pingResults, dnsResults, httpResults, captivePortalChecks, httpRedirectChecks,
   tracerouteResults, miscChecks, interfaceChecks, tcpConnectResults, dnsExtraChecks, ntpChecks,
-  speedtestResults, publicIpEvents, sslChecks, networkStats,
+  osResolverChecks, speedtestResults, publicIpEvents, sslChecks, networkStats,
 } from "./schema.ts";
 
 const MS = { h48: 48*60*60*1000, d30: 30*24*60*60*1000, d90: 90*24*60*60*1000 };
@@ -287,6 +297,7 @@ export async function runCleanup(db: BunSQLiteDatabase<any>) {
     db.delete(tcpConnectResults).where(lt(tcpConnectResults.timestamp, cuts.d30)),
     db.delete(dnsExtraChecks).where(lt(dnsExtraChecks.timestamp, cuts.d30)),
     db.delete(ntpChecks).where(lt(ntpChecks.timestamp, cuts.d30)),
+    db.delete(osResolverChecks).where(lt(osResolverChecks.timestamp, cuts.d30)),
     db.delete(speedtestResults).where(lt(speedtestResults.timestamp, cuts.d90)),
     db.delete(publicIpEvents).where(lt(publicIpEvents.timestamp, cuts.d90)),
     db.delete(sslChecks).where(lt(sslChecks.timestamp, cuts.d90)),
@@ -514,7 +525,7 @@ describe("parseNtpResponse", () => {
 - [ ] Implement `system.ts`:
 ```ts
 import { db } from "../db/client.ts";
-import { ntpChecks } from "../db/schema.ts";
+import { ntpChecks, osResolverChecks } from "../db/schema.ts";
 
 export function parseResolvConf(content: string): string[] {
   return content
@@ -576,7 +587,10 @@ export async function checkSystem() {
   const timestamp = Date.now();
   const [ntp, resolver] = await Promise.all([checkNtp(), checkOsResolver()]);
 
-  await db.insert(ntpChecks).values({ status: ntp.status, driftMs: ntp.driftMs, timestamp });
+  await Promise.all([
+    db.insert(ntpChecks).values({ status: ntp.status, driftMs: ntp.driftMs, timestamp }),
+    db.insert(osResolverChecks).values({ status: resolver.status, nameservers: JSON.stringify(resolver.nameservers), timestamp }),
+  ]);
 
   return { ntp: { ...ntp, timestamp }, osResolver: { ...resolver, timestamp } };
 }
@@ -855,7 +869,7 @@ describe("GET /api/status", () => {
 ```
 - [ ] Run: `bun test backend/src/routes/api.test.ts` — expect FAIL
 - [ ] In `api.ts`, extend the `GET /api/status` handler to query all new tables and include them in the response. Pattern matches existing queries (select latest row per table). Also include `pingStats` from `computePingStats(db, 15)`.
-  - **Note on `osResolver`:** This field is NOT stored in the DB. `checkSystem()` returns it in memory. In `scheduler.ts`, store the last result in a module-level variable (e.g., `let lastSystemResult: SystemResult | null = null`) and update it each time `checkSystem()` runs. Export a getter `getLastSystemResult()`. In `api.ts`, call this getter to include `osResolver` in the response — same pattern as `gateway` and `ispHop` which are detected at startup and stored in module scope.
+  - **Note on `osResolver`:** Stored in `os_resolver_checks` table (see Task 6). In `api.ts` query the latest row: `db.select().from(osResolverChecks).orderBy(desc(osResolverChecks.timestamp)).limit(1)` — same pattern as `ntpChecks`. Parse `nameservers` field with `JSON.parse()`. Returns `null` for the first ~5 min after startup before the first `checkSystem()` run (same null-on-startup behaviour as `dnsExtra`).
 - [ ] Run: `bun test backend/src/routes/api.test.ts` — expect PASS
 - [ ] Run: `bun test` — ALL tests pass
 - [ ] **USER CHECKPOINT:** Restart server, open `/api/status`. Check all new fields are present in JSON.
@@ -927,19 +941,19 @@ describe("CHECKS", () => {
 
   test("check #1 interface active: ok when interface status is up", () => {
     const s = { ...emptyStatus(), interface: { interfaceName: "eth0", status: "up" as const, ipv4: null, ipv6LinkLocal: null, gatewayIp: null, gatewayMac: null, connectionType: "dhcp" as const, rxErrors: 0, txErrors: 0, rxDropped: 0, txDropped: 0, timestamp: Date.now() } };
-    const check = CHECKS.find(c => c.id === "interface_up")!;
+    const check = CHECKS.find(c => c.id === "iface_up")!;
     expect(check.getStatus(s)).toBe("ok");
   });
 
   test("check #1 interface active: fail when interface status is down", () => {
     const s = { ...emptyStatus(), interface: { interfaceName: "eth0", status: "down" as const, ipv4: null, ipv6LinkLocal: null, gatewayIp: null, gatewayMac: null, connectionType: "unknown" as const, rxErrors: 0, txErrors: 0, rxDropped: 0, txDropped: 0, timestamp: Date.now() } };
-    const check = CHECKS.find(c => c.id === "interface_up")!;
+    const check = CHECKS.find(c => c.id === "iface_up")!;
     expect(check.getStatus(s)).toBe("fail");
     expect(check.getFix(s)).not.toBeNull();
   });
 
   test("check #1 returns unknown when no interface data", () => {
-    const check = CHECKS.find(c => c.id === "interface_up")!;
+    const check = CHECKS.find(c => c.id === "iface_up")!;
     expect(check.getStatus(emptyStatus())).toBe("unknown");
   });
 });
@@ -963,7 +977,7 @@ describe("LAYERS", () => {
   - `getStatus` returns `"unknown"` when the relevant data field in `StatusResponse` is `null`
   - `getStatus` returns `"stale"` when `Date.now() - timestamp > staleAfterMs`
   - `getFix` returns `null` for passing checks, `string[]` with steps for failing checks
-  - Check IDs use snake_case: `interface_up`, `ipv4_assigned`, `gateway_set`, etc.
+  - Check IDs match exactly the IDs in `specs/design.md` §4 check inventory: `iface_up`, `gw_ping`, `ping_8888`, `dns_gw`, etc.
 
 - [ ] Run: `bun test frontend/src/lib/checks.test.ts` — expect PASS
 - [ ] Commit:
@@ -1007,7 +1021,7 @@ function baseStatus(): StatusResponse {
     mtu: null, ipv6: null, dhcp: null, ssl: [], networkStats: [],
     interface: { interfaceName: "eth0", status: "up", ipv4: "192.168.1.5", ipv6LinkLocal: "fe80::1", gatewayIp: "192.168.1.1", gatewayMac: "aa:bb:cc:dd:ee:ff", connectionType: "dhcp", rxErrors: 0, txErrors: 0, rxDropped: 0, txDropped: 0, timestamp: Date.now() },
     tcpConnect: { host: "1.1.1.1", port: 443, status: "ok", latencyMs: 18, timestamp: Date.now() },
-    dnsExtra: { consistency: "ok", nxdomain: "ok", hijacking: "ok", doh: "ok", timestamp: Date.now() },
+    dnsExtra: { consistency: "ok", nxdomain: "ok", hijacking: "ok", doh: "ok", dnsLeak: "ok", timestamp: Date.now() },
     captivePortal: { status: "clean", timestamp: Date.now() },
     httpRedirect: { status: "ok", timestamp: Date.now() },
     ntp: { status: "ok", driftMs: 30, timestamp: Date.now() },

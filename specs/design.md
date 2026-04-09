@@ -103,55 +103,55 @@ Docker      — single container, network_mode: host, cap_add: NET_RAW
 
 ### Слой 1 — Device / Interface (8 чеков)
 
-| # | Чек | Метод | OK если |
-|---|-----|-------|---------|
-| 1 | Интерфейс активен | `ip link show` | статус UP |
-| 2 | IPv4 адрес назначен | `ip addr` | есть адрес в 10/172/192 |
-| 3 | Default gateway задан | `ip route` | есть `default via ...` |
-| 4 | DHCP lease активен | `/proc` или `ip` | тип DHCP/PPPoE, не истёк |
-| 5 | Нет ошибок интерфейса | `/proc/net/dev` | rx_errors + tx_errors = 0 |
-| 6 | Нет дропов пакетов | `/proc/net/dev` | rx_dropped + tx_dropped = 0 |
-| 7 | IPv6 link-local адрес | `ip addr` | есть fe80::/10 |
-| 8 | ARP запись шлюза (пассивная) | `arp -n` | MAC шлюза есть в таблице |
+| # | ID | Чек | Метод | OK если |
+|---|----|----|-------|---------|
+| 1 | `iface_up` | Интерфейс активен | `ip link show` | статус UP |
+| 2 | `iface_ipv4` | IPv4 адрес назначен | `ip addr` | есть адрес в 10/172/192 |
+| 3 | `iface_gateway` | Default gateway задан | `ip route` | есть `default via ...` |
+| 4 | `iface_dhcp` | DHCP lease активен | `/proc` или `ip` | тип DHCP/PPPoE, не истёк |
+| 5 | `iface_errors` | Нет ошибок интерфейса | `/proc/net/dev` | rx_errors + tx_errors = 0 |
+| 6 | `iface_drops` | Нет дропов пакетов | `/proc/net/dev` | rx_dropped + tx_dropped = 0 |
+| 7 | `iface_ipv6_ll` | IPv6 link-local адрес | `ip addr` | есть fe80::/10 |
+| 8 | `iface_arp` | ARP запись шлюза (пассивная) | `arp -n` | MAC шлюза есть в таблице |
 
 > **Примечание к #8:** используем пассивный `arp -n` вместо `arping`. `arping` требует явной установки в Dockerfile (`apk add iputils`) и CAP_NET_RAW. Пассивная проверка ARP-таблицы достаточна для диагностики.
 
 ### Слой 2 — Gateway / Local Network (6 чеков)
 
-| # | Чек | Метод | OK если |
-|---|-----|-------|---------|
-| 9 | Ping шлюза — доступность | ICMP ping | RTT < 5ms |
-| 10 | Ping шлюза — стабильность | история ping | loss < 1% за 15 мин |
-| 11 | DNS роутера отвечает | `dig @gateway` | ответ < 100ms |
-| 12 | MTU в локальной сети | `ping -M do -s 1472` | нет фрагментации |
-| 13 | Jitter до шлюза | σ RTT за 15 мин | < 5ms |
-| 14 | Скорость интерфейса | `/proc/net/dev` delta | информационный чек |
+| # | ID | Чек | Метод | OK если |
+|---|----|----|-------|---------|
+| 9 | `gw_ping` | Ping шлюза — доступность | ICMP ping | RTT < 5ms |
+| 10 | `gw_ping_loss` | Ping шлюза — стабильность | история ping | loss < 1% за 15 мин |
+| 11 | `gw_dns` | DNS роутера отвечает | `dig @gateway` | ответ < 100ms |
+| 12 | `gw_mtu` | MTU в локальной сети | `ping -M do -s 1472` | нет фрагментации |
+| 13 | `gw_jitter` | Jitter до шлюза | σ RTT за 15 мин | < 5ms |
+| 14 | `iface_speed` | Скорость интерфейса | `/proc/net/dev` delta | информационный чек |
 
-> **Примечание к #14:** Информационный чек. `getStatus()` = `ok` если есть данные (rx_bytes delta > 0), `unknown` если Linux `/proc/net/dev` недоступен. Никогда `fail` — это показатель, не тест.
+> **Примечание к #14:** Информационный чек. Не отдельный чекер — производный от данных в `networkStats` (rx_bytes/tx_bytes дельта). `getStatus()` = `ok` если есть данные (rx_bytes delta > 0), `unknown` если Linux `/proc/net/dev` недоступен. Никогда `fail` — это показатель, не тест.
 
 ### Слой 3 — ISP / WAN (7 чеков)
 
-| # | Чек | Метод | OK если |
-|---|-----|-------|---------|
-| 15 | ISP первый хоп доступен | traceroute hop 1 | RTT < 50ms, timestamp < 15 мин |
-| 16 | ISP хоп — задержка | traceroute RTT | < 20ms |
-| 17 | Тип WAN подключения | DHCP/PPPoE детект | определён |
-| 18 | CGNAT — нет | публичный IP vs RFC1918 | не совпадает |
-| 19 | Публичный IPv4 | ipify.org | адрес получен |
-| 20 | Маршрут стабилен | traceroute diff | не изменился |
-| 21 | DNS провайдера (опц.) | `dig @isp-dns` | если настроен |
+| # | ID | Чек | Метод | OK если |
+|---|----|----|-------|---------|
+| 15 | `isp_hop` | ISP первый хоп доступен | traceroute hop 1 | RTT < 50ms, timestamp < 15 мин |
+| 16 | `isp_hop_rtt` | ISP хоп — задержка | traceroute RTT | < 20ms |
+| 17 | `wan_type` | Тип WAN подключения | DHCP/PPPoE детект | определён |
+| 18 | `cgnat` | CGNAT — нет | публичный IP vs RFC1918 | не совпадает |
+| 19 | `public_ip` | Публичный IPv4 | ipify.org | адрес получен |
+| 20 | `route_stable` | Маршрут стабилен | traceroute diff | не изменился |
+| 21 | `isp_dns` | DNS провайдера (опц.) | `dig @isp-dns` | если настроен |
 
 ### Слой 4 — Internet / L3 (7 чеков)
 
-| # | Чек | Метод | OK если |
-|---|-----|-------|---------|
-| 22 | Ping 8.8.8.8 | ICMP | RTT < 50ms |
-| 23 | Ping 1.1.1.1 | ICMP | RTT < 50ms |
-| 24 | Ping 9.9.9.9 | ICMP | RTT < 100ms |
-| 25 | TCP connect 443 → 1.1.1.1 | `Bun.connect()` с таймаутом 3s | соединение установлено |
-| 26 | Packet loss % (15 мин) | история ping | < 1% |
-| 27 | Jitter (нестабильность) | σ RTT за 15 мин | < 10ms |
-| 28 | Traceroute — нет black hole | анализ hops JSON | нет 3+ подряд `* * *` |
+| # | ID | Чек | Метод | OK если |
+|---|----|----|-------|---------|
+| 22 | `ping_8888` | Ping 8.8.8.8 | ICMP | RTT < 50ms |
+| 23 | `ping_1111` | Ping 1.1.1.1 | ICMP | RTT < 50ms |
+| 24 | `ping_9999` | Ping 9.9.9.9 | ICMP | RTT < 100ms |
+| 25 | `tcp_443` | TCP connect 443 → 1.1.1.1 | `Bun.connect()` с таймаутом 3s | соединение установлено |
+| 26 | `pkt_loss` | Packet loss % (15 мин) | история ping | < 1% |
+| 27 | `jitter` | Jitter (нестабильность) | σ RTT за 15 мин | < 10ms |
+| 28 | `no_blackhole` | Traceroute — нет black hole | анализ hops JSON | нет 3+ подряд `* * *` |
 
 > **Примечание к #25:** TCP connect реализуется через `Bun.connect({ hostname: '1.1.1.1', port: 443 })` с таймаутом 3с — не raw socket. Владелец: `ping.ts`. Отличает «нет маршрута» от «ICMP заблокирован»: если ping FAIL, но TCP OK — это ICMP firewall, не обрыв.
 
@@ -159,16 +159,16 @@ Docker      — single container, network_mode: host, cap_add: NET_RAW
 
 ### Слой 5 — DNS (8 чеков)
 
-| # | Чек | Метод | OK если |
-|---|-----|-------|---------|
-| 29 | DNS роутера — резолвит | `dig @gateway one.one.one.one` | A = 1.1.1.1 |
-| 30 | DNS 8.8.8.8 | `dig @8.8.8.8 one.one.one.one` | A = 1.1.1.1 |
-| 31 | DNS 1.1.1.1 | `dig @1.1.1.1 one.one.one.one` | A = 1.1.1.1 |
-| 32 | DNS задержка | latency dig запроса | < 100ms |
-| 33 | DNS согласованность | сравнение результатов #29-31 | все вернули 1.1.1.1 |
-| 34 | NXDOMAIN корректен | `dig @dns nxdomain-test-$(random).invalid` | статус NXDOMAIN |
-| 35 | DNS hijacking | `dig @gateway one.one.one.one` → сравнить с #30 | совпадает |
-| 36 | DNS over HTTPS | HTTPS к `cloudflare-dns.com/dns-query?name=one.one.one.one&type=A` | ответ 200, A = 1.1.1.1 |
+| # | ID | Чек | Метод | OK если |
+|---|----|----|-------|---------|
+| 29 | `dns_gw` | DNS роутера — резолвит | `dig @gateway one.one.one.one` | A = 1.1.1.1 |
+| 30 | `dns_8888` | DNS 8.8.8.8 | `dig @8.8.8.8 one.one.one.one` | A = 1.1.1.1 |
+| 31 | `dns_1111` | DNS 1.1.1.1 | `dig @1.1.1.1 one.one.one.one` | A = 1.1.1.1 |
+| 32 | `dns_latency` | DNS задержка | latency dig запроса | < 100ms |
+| 33 | `dns_consistency` | DNS согласованность | сравнение результатов #29-31 | все вернули 1.1.1.1 |
+| 34 | `nxdomain` | NXDOMAIN корректен | `dig @dns nxdomain-test-$(random).invalid` | статус NXDOMAIN |
+| 35 | `dns_hijack` | DNS hijacking | `dig @gateway one.one.one.one` → сравнить с #30 | совпадает |
+| 36 | `doh` | DNS over HTTPS | HTTPS к `cloudflare-dns.com/dns-query?name=one.one.one.one&type=A` | ответ 200, A = 1.1.1.1 |
 
 > **Примечание к #33:** используем `one.one.one.one` — домен Cloudflare, который **гарантированно** возвращает `1.1.1.1` от любого резолвера. Избегаем GeoDNS-проблем с google.com и другими CDN-доменами.
 
@@ -176,45 +176,57 @@ Docker      — single container, network_mode: host, cap_add: NET_RAW
 
 ### Слой 6 — HTTP / Application (7 чеков)
 
-| # | Чек | Метод | OK если |
-|---|-----|-------|---------|
-| 37 | HTTP google.com | GET https://google.com | 200/301, < 2s |
-| 38 | HTTP cloudflare.com | GET https://cloudflare.com | 200, < 2s |
-| 39 | HTTP github.com | GET https://github.com | 200, < 2s |
-| 40 | HTTP redirect → HTTPS | GET http://google.com (без redirect) | Location: https:// |
-| 41 | IPv6 HTTP | GET https://ipv6.google.com | 200 (если IPv6 есть, иначе skip) |
-| 42 | Speedtest (последний) | speedtest-net | download/upload Mbps, показывается с временной меткой |
-| 43 | Captive portal | GET http://detectportal.firefox.com/success.txt | тело = "success\n" |
+| # | ID | Чек | Метод | OK если |
+|---|----|----|-------|---------|
+| 37 | `http_google` | HTTP google.com | GET https://google.com | 200/301, < 2s |
+| 38 | `http_cf` | HTTP cloudflare.com | GET https://cloudflare.com | 200, < 2s |
+| 39 | `http_github` | HTTP github.com | GET https://github.com | 200, < 2s |
+| 40 | `http_redirect` | HTTP redirect → HTTPS | GET http://google.com (без redirect) | Location: https:// |
+| 41 | `http_ipv6` | IPv6 HTTP | GET https://ipv6.google.com | 200 (если IPv6 есть, иначе skip) |
+| 42 | `speedtest` | Speedtest (последний) | speedtest-net | download/upload Mbps, показывается с временной меткой |
+| 43 | `captive_portal` | Captive portal | GET http://detectportal.firefox.com/success.txt | тело = "success\n" |
+
+> **Примечание к #41 (`http_ipv6`):** если `status.interface?.ipv6LinkLocal` равен `null` → `getStatus()` возвращает `'unknown'` (IPv6 не настроен, не является ошибкой). Аналогично #47.
 
 > **Примечание к #40 и #43:** оба чека детектируют перехват трафика, но по-разному. #43 (captive portal) — ICMP/прозрачный перехват на уровне HTTP body. #40 — подмена redirect'а. Правило R10 срабатывает если #43 FAIL или #40 вернул не Location→https. Если оба FAIL одновременно — diagnosis: captive portal активен.
 
+> **Примечание к #17 (`wan_type`):** канонический источник — `interface_checks.connectionType`. Существующий `misc_checks` с `type='dhcp'` устаревший — новый `interface.ts` чекер заменяет его. Чек #4 (`iface_dhcp`) также читает `connectionType` из `interface_checks`. `misc_checks` type=dhcp не используется для новых чеков.
+
 ### Слой 7 — Security / Advanced (10 чеков)
 
-| # | Чек | Метод | OK если |
-|---|-----|-------|---------|
-| 44 | SSL сертификаты | TLS handshake per host | > **30 дней** до истечения |
-| 45 | TLS версия | TLS negotiation | ≥ TLS 1.2 |
-| 46 | MTU / Path MTU | ping -M do до интернета | нет фрагментации |
-| 47 | IPv6 глобальный | ping6 2606:4700:4700::1111 | RTT получен |
-| 48 | NTP синхронизация | UDP NTP запрос к pool.ntp.org:123 (Bun UDP) | drift < 5s |
-| 49 | Публичный IP — не менялся | история publicIpEvents | нет изменений за 24ч |
-| 50 | Routing — не менялся | traceroute diff | нет изменений |
-| 51 | OS resolver (/etc/resolv.conf) | чтение файла | содержит nameserver |
-| 52 | DNS leak check | сравнить IP ответившего сервера с ожидаемым | DNS идёт через роутер или 8.8.8.8 |
-| 53 | Аномалии интерфейса | /proc/net/dev delta по времени | нет резкого роста errors/drops |
+| # | ID | Чек | Метод | OK если |
+|---|----|----|-------|---------|
+| 44 | `ssl` | SSL сертификаты | TLS handshake per host | > **30 дней** до истечения |
+| 45 | `tls_ver` | TLS версия | TLS negotiation | ≥ TLS 1.2 |
+| 46 | `path_mtu` | MTU / Path MTU | ping -M do до интернета | нет фрагментации |
+| 47 | `ipv6_global` | IPv6 глобальный | ping6 2606:4700:4700::1111 | RTT получен |
+| 48 | `ntp` | NTP синхронизация | UDP NTP запрос к pool.ntp.org:123 (Bun UDP) | drift < 5s |
+| 49 | `ip_stable` | Публичный IP — не менялся | история publicIpEvents | нет изменений за 24ч |
+| 50 | `route_stable_sec` | Routing — не менялся | traceroute diff | нет изменений |
+| 51 | `os_resolver` | OS resolver (/etc/resolv.conf) | чтение файла | содержит nameserver |
+| 52 | `dns_leak` | DNS leak check | сравнить IP ответившего сервера с ожидаемым | DNS идёт через роутер или 8.8.8.8 |
+| 53 | `iface_anomaly` | Аномалии интерфейса | /proc/net/dev delta по времени | нет резкого роста errors/drops |
 
-> **Примечание к #44:** существующий код использует порог 14 дней. Обновить до 30 дней в `misc.ts`.
+> **Примечание к #44 (`ssl`):** существующий код использует порог 14 дней. Обновить до 30 дней в `misc.ts`.
 
-> **Примечание к #48:** `timedatectl` не работает в Alpine Docker (нет systemd). Реализация через `Bun.udpSocket()` (доступен с Bun 1.1.x):
+> **Примечание к #45 (`tls_ver`):** TLS версия определяется во время SSL handshake в `misc.ts` и хранится в `ssl_checks.tls_version` (поле добавлено в схему). `getStatus()` читает `status.ssl[0]?.tlsVersion` (первый хост в списке). OK если `TLSv1.2` или `TLSv1.3`, warn если `TLSv1.1` или ниже, unknown если поле `null`.
+
+> **Примечание к #47 (`ipv6_global`):** если IPv6 link-local недоступен (`iface_ipv6_ll` = fail/unknown) → возвращать `unknown`, не `fail`. Это означает «IPv6 не настроен», а не «IPv6 сломан». Аналогично чеку #41 (`http_ipv6`).
+
+> **Примечание к #48 (`ntp`):** `timedatectl` не работает в Alpine Docker (нет systemd). Реализация через `Bun.udpSocket()` (доступен с Bun 1.1.x):
 > 1. `const sock = Bun.udpSocket({ port: 0, connect: { hostname: 'pool.ntp.org', port: 123 } })`
 > 2. Отправить 48-байтный NTP-пакет (LI=0, VN=4, Mode=3 — первый байт `0x23`, остальные нули)
 > 3. Прочитать ответ, bytes 40-47 — transmit timestamp (seconds since 1900-01-01)
 > 4. Конвертировать в Unix ms: `(ntpSec - 2208988800) * 1000`
 > 5. `Math.abs(ntpMs - Date.now()) < 5000` → OK
 
-> **Примечание к #51:** `/etc/resolv.conf` внутри Docker-контейнера с `network_mode: host` отражает конфигурацию самого контейнера (может быть injected Docker'ом). Чек репортит **что фактически использует контейнер** и подтверждает что DNS-разрешение настроено (есть `nameserver` строка). Не валидирует «правильность» — это информационный чек.
+> **Примечание к #50 (`route_stable_sec`) и #20 (`route_stable`):** оба чека используют **одни и те же данные** из `traceroute_results` (поле `routing_changed`). Разница — контекст отображения: #20 в Layer 3 сигнализирует об изменении маршрута к провайдеру, #50 в Layer 7 показывает это как потенциальную аномалию безопасности. В `lib/checks.ts` оба чека читают `status.traceroute?.routing_changed`.
 
-> **Примечание к #52:** Реализация без третьих сервисов. Делаем `dig one.one.one.one` с флагом `+stats` — в выводе будет `SERVER: x.x.x.x`. Сравниваем этот IP с ожидаемым резолвером (из resolv.conf). Если совпадает → нет утечки. Если DNS-запрос ушёл на другой сервер → предупреждение.
+> **Примечание к #51 (`os_resolver`):** `/etc/resolv.conf` внутри Docker-контейнера с `network_mode: host` отражает конфигурацию самого контейнера (может быть injected Docker'ом). Чек репортит **что фактически использует контейнер** и подтверждает что DNS-разрешение настроено (есть `nameserver` строка). Не валидирует «правильность» — это информационный чек.
+
+> **Примечание к #52 (`dns_leak`):** Реализация без третьих сервисов. Делаем `dig one.one.one.one` с флагом `+stats` — в выводе будет `SERVER: x.x.x.x`. Сравниваем этот IP с ожидаемым резолвером (из `/etc/resolv.conf`). Если совпадает → нет утечки. Если DNS-запрос ушёл на другой сервер → предупреждение. Результат хранится в `dnsExtra.dnsLeak` в API response.
+
+> **Примечание к #53 (`iface_anomaly`):** Производный чек — не отдельный чекер, не отдельная таблица. `getStatus()` в `lib/checks.ts` вычисляется из последних двух записей `networkStats`: если delta `rx_errors` или `tx_errors` за интервал резко выросла (> 100 ошибок за 30s) → warn. Данные уже есть в API response (`networkStats`), отдельного API-поля не нужно.
 
 ---
 
@@ -226,14 +238,14 @@ Docker      — single container, network_mode: host, cap_add: NET_RAW
 interface DiagnosticRule {
   id: string;
   severity: 'critical' | 'warning' | 'info';
-  condition: (s: StatusMap) => boolean;
+  condition: (s: StatusResponse) => boolean;
   title: string;
   description: string;
   steps: string[];
 }
 ```
 
-`StatusMap` — плоский объект со всеми 53 чеками: `{ [checkId]: CheckResult }`.
+`condition` принимает `StatusResponse` — тот же тип, что возвращает `/api/status`. Правила читают напрямую поля `s.ping`, `s.cgnat`, `s.pingStats` и т.д.
 
 Несколько правил могут сработать одновременно. Выводятся все, сортировка: critical → warning → info.
 
@@ -241,20 +253,24 @@ interface DiagnosticRule {
 
 | # | Severity | Название | Ключевые условия |
 |---|----------|----------|-----------------|
-| R1 | critical | Полный обрыв — нет сети совсем | gateway_ping FAIL + ping_8888 FAIL + dns_all FAIL |
-| R2 | critical | Роутер недоступен | gateway_ping FAIL + arp_gateway FAIL + interface_up OK |
-| R3 | critical | Нет интернета — проблема у провайдера | gateway_ping OK + ping_8888 FAIL + ping_1111 FAIL (ISP traceroute опционален, не блокирует правило) |
-| R4 | warning | DNS не работает, но IP-связь есть | ping_8888 OK + tcp_443_1111 OK + dns_gateway FAIL + dns_8888 FAIL + dns_1111 FAIL |
-| R5 | warning | DNS роутера сломан, внешние работают | dns_gateway FAIL + dns_8888 OK |
-| R6 | warning | DNS hijacking — перехват запросов | dns_hijacking FAIL или nxdomain FAIL |
-| R7 | warning | Нестабильное соединение — потери пакетов | packet_loss_15m > 5% |
-| R8 | warning | Проблема MTU — фрагментация | mtu_fragmentation FAIL |
-| R9 | info | CGNAT — ты за NAT провайдера | cgnat_detected = true |
-| R10 | warning | HTTP заблокирован, IP-связь и DNS работают | ping_8888 OK + tcp_443_1111 OK + dns_8888 OK + http_google FAIL + http_cf FAIL |
-| R11 | info | IPv6 не работает | ipv6_ping FAIL + ping_8888 OK |
-| R12 | warning | Высокая задержка у провайдера | gateway_rtt < 3ms + isp_hop_rtt > 50ms |
+| R1 | critical | Полный обрыв — нет сети совсем | `gw_ping` FAIL + `ping_8888` FAIL + `dns_gw`/`dns_8888`/`dns_1111` все FAIL |
+| R2 | critical | Роутер недоступен | `gw_ping` FAIL + `iface_arp` FAIL + `iface_up` OK |
+| R3 | critical | Нет интернета — проблема у провайдера | `gw_ping` OK + `ping_8888` FAIL + `ping_1111` FAIL |
+| R4 | warning | DNS не работает, но IP-связь есть | `ping_8888` OK + `tcp_443` OK + `dns_gw` FAIL + `dns_8888` FAIL + `dns_1111` FAIL |
+| R5 | warning | DNS роутера сломан, внешние работают | `dns_gw` FAIL + `dns_8888` OK |
+| R6 | warning | DNS hijacking — перехват запросов | `dns_hijack` FAIL или `nxdomain` FAIL |
+| R7 | warning | Нестабильное соединение — потери пакетов | `max(pingStats.targets[*].lossPercent)` > 5% |
+| R8 | warning | Проблема MTU — фрагментация | `gw_mtu` FAIL или `path_mtu` FAIL |
+| R9 | info | CGNAT — ты за NAT провайдера | `cgnat` = detected |
+| R10 | warning | HTTP заблокирован, IP-связь и DNS работают | `ping_8888` OK + `tcp_443` OK + `dns_8888` OK + `http_google` FAIL + `http_cf` FAIL |
+| R11 | info | IPv6 не работает | `ipv6_global` FAIL + `ping_8888` OK |
+| R12 | warning | Высокая задержка у провайдера | `gw_ping` RTT < 3ms + traceroute `hops[0].rttMs` > 50ms |
 
 > **Примечание к R3:** правило срабатывает по ping FAIL на 8.8.8.8 и 1.1.1.1 без ожидания traceroute (интервал 10 мин). Traceroute используется как дополнительное подтверждение в тексте диагноза, но не как условие срабатывания.
+
+> **Примечание к R7:** условие `max(pingStats.targets[*].lossPercent) > 5%` — берётся максимум по всем таргетам из `pingStats.targets`. В `lib/diagnostics.ts`: `Object.values(s.pingStats?.targets ?? {}).some(t => t.lossPercent > 5)`.
+
+> **Примечание к R12:** условие использует raw RTT-значения из `ping` array и первого хопа traceroute, не бинарные статусы чеков. В `lib/diagnostics.ts` читать: `s.ping.find(p => isGateway(p.target))?.rttMs` и `s.traceroute?.hops[0]?.rttMs`. `isGateway(target)` — утилита в `lib/diagnostics.ts`: `(target: string) => target === status.interface?.gatewayIp`.
 
 ---
 
@@ -281,7 +297,7 @@ interface StatusResponse {
   // новые поля
   interface: InterfaceCheck | null;       // статус сетевого интерфейса
   gateway: GatewayCheck | null;           // ARP + jitter шлюза
-  tcpConnect: TcpConnectCheck | null;     // TCP 443 → 1.1.1.1
+  tcpConnect: TcpConnectResult | null;    // TCP 443 → 1.1.1.1
   dnsExtra: DnsExtraCheck | null;         // consistency, NXDOMAIN, hijacking, DoH
   captivePortal: CaptivePortalCheck | null;
   httpRedirect: HttpRedirectCheck | null;
@@ -292,7 +308,7 @@ interface StatusResponse {
 
 interface InterfaceCheck {
   interfaceName: string;
-  status: 'up' | 'down';
+  status: 'up' | 'down' | 'unknown';
   ipv4: string | null;
   ipv6LinkLocal: string | null;
   gatewayIp: string | null;
@@ -310,7 +326,7 @@ interface GatewayCheck {
   timestamp: number;
 }
 
-interface TcpConnectCheck {
+interface TcpConnectResult {
   host: '1.1.1.1';
   port: 443;
   status: 'ok' | 'timeout' | 'error';
@@ -323,6 +339,7 @@ interface DnsExtraCheck {
   nxdomain: 'ok' | 'fail';                      // несуществующий домен → NXDOMAIN
   hijacking: 'ok' | 'hijacked' | 'unknown';     // one.one.one.one → 1.1.1.1
   doh: 'ok' | 'fail' | 'unknown';               // DoH доступен
+  dnsLeak: 'ok' | 'leak' | 'unknown';           // DNS-запрос идёт через ожидаемый сервер
   timestamp: number;
 }
 
@@ -369,16 +386,17 @@ interface PingStatsCheck {
 
 Текущий enum `["cgnat", "mtu", "dhcp", "ipv6"]` должен быть расширен. Рекомендуется убрать ограничение enum и оставить свободный `text()`, либо добавить все новые типы. **Это breaking change в схеме — нужна DDL-миграция при старте.**
 
-**Решение: добавить 5 новых таблиц** (не расширять `misc_checks` enum):
+**Решение: добавить 7 новых таблиц** (не расширять `misc_checks` enum):
 
 | Новая таблица | Данные |
 |---------------|--------|
 | `interface_checks` | статус интерфейса (поля из InterfaceCheck) |
 | `tcp_connect_results` | TCP connect тесты |
-| `dns_extra_checks` | consistency / NXDOMAIN / hijacking / DoH |
+| `dns_extra_checks` | consistency / NXDOMAIN / hijacking / DoH / dnsLeak |
 | `captive_portal_checks` | captive portal (#43): `id, status TEXT('clean','detected','error'), timestamp INTEGER` |
 | `http_redirect_checks` | HTTP→HTTPS redirect (#40): `id, status TEXT('ok','intercepted','error'), timestamp INTEGER` |
 | `ntp_checks` | NTP drift |
+| `os_resolver_checks` | OS DNS resolver конфигурация из `/etc/resolv.conf` |
 
 Причина: у InterfaceCheck 12 типизированных полей, у DnsExtraCheck 4 — хранить их в JSON в `misc_checks.value` сложнее запрашивать и типизировать. `misc_checks` остаётся без изменений для существующих типов (`cgnat`, `mtu`, `dhcp`, `ipv6`).
 
@@ -410,8 +428,11 @@ const socket = await Bun.connect({ hostname: '1.1.1.1', port: 443, ... });
 - **NXDOMAIN**: `dig check-{timestamp}.invalid` → ожидаем NXDOMAIN
 - **DNS hijacking**: если gateway вернул не 1.1.1.1 для `one.one.one.one` → hijacked
 - **DNS over HTTPS**: fetch `https://cloudflare-dns.com/dns-query?name=one.one.one.one&type=A`
+- **DNS leak**: `dig one.one.one.one +stats` → парсить `SERVER: x.x.x.x` из вывода, сравнить с первым `nameserver` из `/etc/resolv.conf`. Если совпадает → `ok`, иначе → `leak`. Если resolv.conf недоступен → `unknown`. Результат в поле `dnsLeak` типа `DnsExtraCheck`.
 
 Интервал: 5 мин (кроме основных dig-запросов — 60s).
+
+> **Примечание к DNS extras и стартовым данным:** первые 5 минут после старта контейнера `dnsExtra` в `/api/status` будет `null`. Фронтенд должен отображать все чеки этой группы (`dns_consistency`, `nxdomain`, `dns_hijack`, `doh`, `dns_leak`) как `unknown` если `dnsExtra === null` — аналогично общей логике `staleAfterMs`.
 
 ### 7.5 Расширение `http.ts`
 
@@ -466,11 +487,14 @@ const socket = await Bun.connect({ hostname: '1.1.1.1', port: 443, ... });
     layer: 1 | 2 | 3 | 4 | 5 | 6 | 7;
     name: string;
     description: string;
+    staleAfterMs: number;                         // 2 × check interval в мс
     getValue(s: StatusResponse): string | null;
-    getStatus(s: StatusResponse): 'ok' | 'fail' | 'warn' | 'stale' | 'unknown';
-    getFix(s: StatusResponse): string[] | null;  // шаги если FAIL, null если нечего показывать
+    getStatus(s: StatusResponse): 'ok' | 'fail' | 'warn' | 'stale' | 'unknown' | 'info';
+    getFix(s: StatusResponse): string[] | null;   // шаги если FAIL, null если нечего показывать
   }
   ```
+
+  `getStatus()` возвращает `'stale'` если `Date.now() - lastTimestamp > staleAfterMs`. Это обрабатывается внутри каждого чека — `getValue` возвращает timestamp из соответствующего поля `StatusResponse`.
 
 ### 8.3 Рефактор App.svelte
 
