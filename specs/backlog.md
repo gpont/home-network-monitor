@@ -106,4 +106,4 @@
 
 ## T33 — README (независимо от остальных)
 
-- [ ] **T33** — README: badges + hero screenshot + Contributing section · [plans/33-readme.md](plans/33-readme.md)
+- [x] **T33** — README: badges + hero screenshot + Contributing section · [plans/33-readme.md](plans/33-readme.md) — badges, screenshot, Contributing секция добавлены
