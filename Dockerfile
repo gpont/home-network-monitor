@@ -14,9 +14,10 @@ FROM oven/bun:1-alpine AS backend
 
 # Install network tools: ping, traceroute, dig, openssl
 RUN apk add --no-cache \
+    iproute2 \
     iputils \
-    traceroute \
     bind-tools \
+    traceroute \
     openssl \
     iperf3
 
@@ -36,6 +37,9 @@ COPY --from=frontend-builder /app/backend/public ./public
 # Create data directory
 RUN mkdir -p /app/data
 
-EXPOSE 3000
+EXPOSE 3201
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD wget -qO- http://localhost:${PORT:-3201}/api/status > /dev/null || exit 1
 
 CMD ["bun", "run", "backend/src/index.ts"]
