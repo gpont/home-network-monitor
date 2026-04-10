@@ -62,6 +62,9 @@ export function parseNetstatRouteOutput(out: string): {
   const m = out.match(/^default\s+(\d+\.\d+\.\d+\.\d+)/m);
   if (!m) return { gatewayIp: null, connectionType: "unknown" };
   const pppoe = /ppp\d/.test(out);
+  // macOS: cannot distinguish DHCP vs static from netstat -rn alone.
+  // "static" detection requires `ipconfig getpacket <iface>` (handled in checkDhcp).
+  // Default to "dhcp" as most home networks use DHCP.
   return {
     gatewayIp: m[1] ?? null,
     connectionType: pppoe ? "pppoe" : "dhcp",
