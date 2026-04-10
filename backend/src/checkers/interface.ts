@@ -31,52 +31,67 @@ export function parseArpOutput(ip: string, out: string): string | null {
   return m?.[1] ?? null;
 }
 
+export function parseIfconfigOutput(out: string): {
+  name: string;
+  status: "up" | "down" | "unknown";
+  ipv4: string | null;
+  ipv6LinkLocal: string | null;
+} {
+  const ifaceMatch = out.match(/^(\w+\d[\w.]*):.*flags=\S+<([^>]+)>/m);
+  if (!ifaceMatch) return { name: "unknown", status: "unknown", ipv4: null, ipv6LinkLocal: null };
+
+  const name = ifaceMatch[1] ?? "unknown";
+  const flags = ifaceMatch[2] ?? "";
+  const status: "up" | "down" | "unknown" = flags.includes("UP") ? "up" : "down";
+
+  const v4 = out.match(/\binet\s+(\d+\.\d+\.\d+\.\d+)/);
+  const v6 = out.match(/\binet6\s+(fe80:[^\s%/]+)/i);
+
+  return {
+    name,
+    status,
+    ipv4: v4?.[1] ?? null,
+    ipv6LinkLocal: v6?.[1] ?? null,
+  };
+}
+
+export function parseNetstatRouteOutput(out: string): {
+  gatewayIp: string | null;
+  connectionType: "dhcp" | "pppoe" | "static" | "unknown";
+} {
+  const m = out.match(/^default\s+(\d+\.\d+\.\d+\.\d+)/m);
+  if (!m) return { gatewayIp: null, connectionType: "unknown" };
+  const pppoe = /ppp\d/.test(out);
+  return {
+    gatewayIp: m[1] ?? null,
+    connectionType: pppoe ? "pppoe" : "dhcp",
+  };
+}
+
+export function parseNetstatIfaceStats(
+  ifname: string,
+  out: string
+): { rxErrors: number; txErrors: number; rxDropped: number; txDropped: number } {
+  const line = out.split("\n").find(l => l.trim().startsWith(ifname));
+  if (!line) return { rxErrors: 0, txErrors: 0, rxDropped: 0, txDropped: 0 };
+  const parts = line.trim().split(/\s+/);
+  // Columns (0-indexed): 0=Name 1=Mtu 2=Network 3=Address 4=Ipkts 5=Ierrs 6=Ibytes 7=Opkts 8=Oerrs
+  return {
+    rxErrors: parseInt(parts[5] ?? "0"),
+    txErrors: parseInt(parts[8] ?? "0"),
+    rxDropped: 0,  // not available in this netstat view on macOS
+    txDropped: 0,
+  };
+}
+
 export async function checkInterface() {
   const timestamp = now();
   try {
-    const [linkOut, addrOut, routeOut] = await Promise.all([
-      spawn(["ip", "link", "show"], 3000),
-      spawn(["ip", "addr", "show"], 3000),
-      spawn(["ip", "route", "show", "default"], 3000),
-    ]);
-
-    const link = parseIpLinkOutput(linkOut.stdout);
-    const addr = parseIpAddrOutput(addrOut.stdout);
-    const route = parseIpRouteOutput(routeOut.stdout);
-
-    let gatewayMac: string | null = null;
-    if (route.gatewayIp) {
-      const arpOut = await spawn(["arp", "-n", route.gatewayIp], 2000).catch(() => ({ stdout: "" }));
-      gatewayMac = parseArpOutput(route.gatewayIp, arpOut.stdout);
+    if (process.platform === "darwin") {
+      return await checkInterfaceMacOs(timestamp);
+    } else {
+      return await checkInterfaceLinux(timestamp);
     }
-
-    let rxErrors = 0, txErrors = 0, rxDropped = 0, txDropped = 0;
-    try {
-      const procOut = await Bun.file("/proc/net/dev").text();
-      const line = procOut.split("\n").find(l => l.includes(link.name));
-      if (line) {
-        const parts = line.trim().split(/\s+/);
-        rxErrors = parseInt(parts[3] ?? "0");
-        rxDropped = parseInt(parts[4] ?? "0");
-        txErrors = parseInt(parts[11] ?? "0");
-        txDropped = parseInt(parts[12] ?? "0");
-      }
-    } catch { /* not on Linux */ }
-
-    const result = {
-      interfaceName: link.name,
-      status: link.status,
-      ipv4: addr.ipv4,
-      ipv6LinkLocal: addr.ipv6LinkLocal,
-      gatewayIp: route.gatewayIp,
-      gatewayMac,
-      connectionType: route.connectionType,
-      rxErrors, txErrors, rxDropped, txDropped,
-      timestamp,
-    };
-
-    await db.insert(interfaceChecks).values(result);
-    return result;
   } catch {
     const result = {
       interfaceName: "unknown", status: "unknown" as const,
@@ -88,4 +103,85 @@ export async function checkInterface() {
     await db.insert(interfaceChecks).values(result);
     return result;
   }
+}
+
+async function checkInterfaceLinux(timestamp: number) {
+  const [linkOut, addrOut, routeOut] = await Promise.all([
+    spawn(["ip", "link", "show"], 3000),
+    spawn(["ip", "addr", "show"], 3000),
+    spawn(["ip", "route", "show", "default"], 3000),
+  ]);
+
+  const link = parseIpLinkOutput(linkOut.stdout);
+  const addr = parseIpAddrOutput(addrOut.stdout);
+  const route = parseIpRouteOutput(routeOut.stdout);
+
+  let gatewayMac: string | null = null;
+  if (route.gatewayIp) {
+    const arpOut = await spawn(["arp", "-n", route.gatewayIp], 2000).catch(() => ({ stdout: "" }));
+    gatewayMac = parseArpOutput(route.gatewayIp, arpOut.stdout);
+  }
+
+  let rxErrors = 0, txErrors = 0, rxDropped = 0, txDropped = 0;
+  try {
+    const procOut = await Bun.file("/proc/net/dev").text();
+    const line = procOut.split("\n").find(l => l.includes(link.name));
+    if (line) {
+      const parts = line.trim().split(/\s+/);
+      rxErrors = parseInt(parts[3] ?? "0");
+      rxDropped = parseInt(parts[4] ?? "0");
+      txErrors = parseInt(parts[11] ?? "0");
+      txDropped = parseInt(parts[12] ?? "0");
+    }
+  } catch { /* not on Linux */ }
+
+  const result = {
+    interfaceName: link.name,
+    status: link.status,
+    ipv4: addr.ipv4,
+    ipv6LinkLocal: addr.ipv6LinkLocal,
+    gatewayIp: route.gatewayIp,
+    gatewayMac,
+    connectionType: route.connectionType,
+    rxErrors, txErrors, rxDropped, txDropped,
+    timestamp,
+  };
+
+  await db.insert(interfaceChecks).values(result);
+  return result;
+}
+
+async function checkInterfaceMacOs(timestamp: number) {
+  const ifconfigOut = await spawn(["ifconfig", "-a"], 3000);
+  const parsed = parseIfconfigOutput(ifconfigOut.stdout);
+
+  const routeOut = await spawn(["netstat", "-rn"], 3000);
+  const route = parseNetstatRouteOutput(routeOut.stdout);
+
+  let gatewayMac: string | null = null;
+  if (route.gatewayIp) {
+    const arpOut = await spawn(["arp", "-n", route.gatewayIp], 2000).catch(() => ({ stdout: "" }));
+    gatewayMac = parseArpOutput(route.gatewayIp, arpOut.stdout);
+  }
+
+  let rxErrors = 0, txErrors = 0, rxDropped = 0, txDropped = 0;
+  if (parsed.name !== "unknown") {
+    const statsOut = await spawn(["netstat", "-I", parsed.name, "-b"], 3000).catch(() => ({ stdout: "" }));
+    const stats = parseNetstatIfaceStats(parsed.name, statsOut.stdout);
+    ({ rxErrors, txErrors, rxDropped, txDropped } = stats);
+  }
+
+  const result = {
+    interfaceName: parsed.name,
+    status: parsed.status,
+    ipv4: parsed.ipv4,
+    ipv6LinkLocal: parsed.ipv6LinkLocal,
+    gatewayIp: route.gatewayIp,
+    gatewayMac,
+    connectionType: route.connectionType,
+    rxErrors, txErrors, rxDropped, txDropped,
+    timestamp,
+  };
+  await db.insert(interfaceChecks).values(result);
+  return result;
 }
