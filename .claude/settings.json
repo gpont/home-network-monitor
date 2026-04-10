@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs kill:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(curl -v http://localhost:3201/api/status)",
+      "Bash(git tag:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}
