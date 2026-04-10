@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { CheckDefinition, StatusResponse, CheckStatus } from '../lib/types.ts';
+  import { t } from '../lib/i18n/index.ts';
 
   let { check, status }: { check: CheckDefinition; status: StatusResponse } = $props();
 
@@ -27,15 +28,15 @@
     'transparent'
   );
   const noDataMsg = $derived(
-    st === 'stale' ? 'данные устарели' :
-    check.noDataHint ?? 'данные пока не получены'
+    st === 'stale' ? $t('ui.stale') :
+    check.noDataHint ? $t(check.noDataHint) : $t('ui.no_data')
   );
 </script>
 
 <div style="padding: 5px 8px; border-radius: 6px; background: {bg}; margin-bottom: 1px;">
   <div style="display: flex; align-items: flex-start; gap: 8px;">
     <span
-      title={check.hint}
+      title={$t(check.hint)}
       style="
         display: inline-flex; align-items: center; justify-content: center;
         width: 18px; height: 18px; border-radius: 50%;
@@ -46,9 +47,9 @@
     <div style="flex: 1; min-width: 0;">
       <div style="display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;">
         <span
-          title={check.hint}
+          title={$t(check.hint)}
           style="font-weight: 500; font-size: 13px; color: {isNoData ? '#4b5563' : '#e2e8f0'}; cursor: help;"
-        >{check.name}</span>
+        >{$t(check.name)}</span>
         {#if !isNoData && val}
           <span style="font-size: 12px; color: {color}; font-weight: 500;">{val}</span>
         {/if}
@@ -56,16 +57,16 @@
       {#if isNoData}
         <div style="font-size: 11px; color: #374151; margin-top: 1px; font-style: italic;">{noDataMsg}</div>
       {:else}
-        <div style="font-size: 11px; color: #475569; margin-top: 1px;">{check.hint}</div>
+        <div style="font-size: 11px; color: #475569; margin-top: 1px;">{$t(check.hint)}</div>
       {/if}
       {#if fix && fix.length > 0}
         <div style="margin-top: 5px; padding: 5px 8px;
           background: {st === 'warn' ? 'rgba(234,179,8,0.1)' : 'rgba(239,68,68,0.1)'};
           border-left: 2px solid {st === 'warn' ? '#eab308' : '#ef4444'};
           border-radius: 3px;">
-          <div style="font-size: 11px; font-weight: 600; color: {st === 'warn' ? '#eab308' : '#ef4444'}; margin-bottom: 3px;">Что делать:</div>
+          <div style="font-size: 11px; font-weight: 600; color: {st === 'warn' ? '#eab308' : '#ef4444'}; margin-bottom: 3px;">{$t('ui.what_to_do')}</div>
           {#each fix as step, i}
-            <div style="font-size: 11px; color: #cbd5e1; margin-bottom: 2px;">{i+1}. {step}</div>
+            <div style="font-size: 11px; color: #cbd5e1; margin-bottom: 2px;">{i+1}. {$t(step)}</div>
           {/each}
         </div>
       {/if}
