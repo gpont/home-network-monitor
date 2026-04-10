@@ -1,5 +1,9 @@
 import { Hono } from "hono";
 import { db as globalDb } from "../db/client.ts";
+import { runSpeedtest } from "../checkers/speedtest.ts";
+import { runTraceroute } from "../checkers/traceroute.ts";
+import { checkMtu, checkCgnat } from "../checkers/misc.ts";
+import { checkPublicIp } from "../checkers/publicip.ts";
 import {
   pingResults,
   dnsResults,
@@ -23,6 +27,12 @@ import { computePingStats } from "../checkers/ping.ts";
 
 export function buildApiRoutes(db: BunSQLiteDatabase<any>) {
   const router = new Hono();
+
+  // ─── In-flight guard ──────────────────────────────────────────────────────────
+  const runningChecks = new Set<string>();
+
+  type RunType = "speedtest" | "traceroute" | "mtu" | "cgnat" | "publicip";
+  const validRunTypes = new Set<RunType>(["speedtest", "traceroute", "mtu", "cgnat", "publicip"]);
 
   const sinceMs = (minutes: number) => Date.now() - minutes * 60_000;
 
@@ -388,6 +398,32 @@ export function buildApiRoutes(db: BunSQLiteDatabase<any>) {
       .orderBy(desc(sslChecks.timestamp))
       .limit(50);
     return c.json(rows);
+  });
+
+  // ─── POST /api/run/:type ─────────────────────────────────────────────────────
+  router.post("/run/:type", async (c) => {
+    const type = c.req.param("type") as RunType;
+    if (!validRunTypes.has(type)) {
+      return c.json({ error: "unknown type" }, 400);
+    }
+    if (runningChecks.has(type)) {
+      return c.json({ error: "already running" }, 409);
+    }
+
+    runningChecks.add(type);
+    try {
+      let result: unknown = null;
+      if (type === "speedtest") result = await runSpeedtest();
+      else if (type === "traceroute") result = await runTraceroute("8.8.8.8");
+      else if (type === "mtu") result = await checkMtu();
+      else if (type === "cgnat") result = await checkCgnat(null);
+      else if (type === "publicip") result = await checkPublicIp();
+      return c.json({ ok: true, result });
+    } catch (err) {
+      return c.json({ ok: false, error: String(err) }, 500);
+    } finally {
+      runningChecks.delete(type);
+    }
   });
 
   return router;
