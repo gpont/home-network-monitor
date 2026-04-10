@@ -11,30 +11,30 @@
 ## Batch 1 — Foundation (параллельно)
 > Блокирует: T04
 
-- [ ] **T01** — MIT License + README · [plans/01-foundation.md](plans/01-foundation.md#t01)
-- [ ] **T02** — config.ts: env vars + парсинг · [plans/01-foundation.md](plans/01-foundation.md#t02)
-- [ ] **T03** — DB schema + DDL-миграция · [plans/01-foundation.md](plans/01-foundation.md#t03)
+- [x] **T01** — MIT License + README · [plans/01-foundation.md](plans/01-foundation.md#t01) — LICENSE (MIT, Evgenii Guzhikhin) + README по specs/arch.md §9
+- [x] **T02** — config.ts: env vars + парсинг · [plans/01-foundation.md](plans/01-foundation.md#t02) — parseTargets/parseDnsServers/parseHttpTargets, 4 теста зелёных
+- [x] **T03** — DB schema + DDL-миграция · [plans/01-foundation.md](plans/01-foundation.md#t03) — 7 новых таблиц + hasBlackHole в traceroute_results
 
 ---
 
 ## T04 — DB cleanup job
 > После: T03 · Блокирует: Batch 2
 
-- [ ] **T04** — Ежедневная очистка по retention policy · [plans/01-foundation.md](plans/01-foundation.md#t04)
+- [x] **T04** — Ежедневная очистка по retention policy · [plans/01-foundation.md](plans/01-foundation.md#t04) — runCleanup/scheduleCleanup, 16 таблиц, тест зелёный
 
 ---
 
 ## Batch 2 — Checkers + Infra (параллельно)
 > После: T04 · Блокирует: T11
 
-- [ ] **T05** — interface.ts: ip link/addr/route, arp · [plans/05-interface.md](plans/05-interface.md)
-- [ ] **T06** — system.ts: NTP + /etc/resolv.conf · [plans/06-system.md](plans/06-system.md)
-- [ ] **T07** — ping.ts: TCP connect + jitter · [plans/07-ping.md](plans/07-ping.md)
-- [ ] **T08** — dns.ts: consistency/NXDOMAIN/hijacking/DoH · [plans/08-dns.md](plans/08-dns.md)
-- [ ] **T09** — http.ts: captive portal + redirect · [plans/09-http.md](plans/09-http.md)
-- [ ] **T10** — misc.ts: SSL 30d threshold + black hole · [plans/10-misc.md](plans/10-misc.md)
-- [ ] **T21** — Dockerfile: multi-stage + Alpine packages · [plans/21-dockerfile.md](plans/21-dockerfile.md)
-- [ ] **T22** — docker-compose.yml · [plans/22-docker-compose.md](plans/22-docker-compose.md)
+- [x] **T05** — interface.ts: ip link/addr/route, arp · [plans/05-interface.md](plans/05-interface.md) — parseIpLinkOutput/Addr/Route/Arp + checkInterface, 8 тестов
+- [x] **T06** — system.ts: NTP + /etc/resolv.conf · [plans/06-system.md](plans/06-system.md) — parseResolvConf + NTP UDP, 3 теста
+- [x] **T07** — ping.ts: TCP connect + jitter · [plans/07-ping.md](plans/07-ping.md) — checkTcpConnect + computePingStats, 2 теста
+- [x] **T08** — dns.ts: consistency/NXDOMAIN/hijacking/DoH · [plans/08-dns.md](plans/08-dns.md) — checkDnsConsistency/Nxdomain/Hijacking + checkDnsExtras, 5 тестов
+- [x] **T09** — http.ts: captive portal + redirect · [plans/09-http.md](plans/09-http.md) — parseCaptivePortalResponse/parseRedirectResponse + async checkers, 5 тестов
+- [x] **T10** — misc.ts: SSL 30d threshold + black hole · [plans/10-misc.md](plans/10-misc.md) — detectBlackHole, SSL порог 30д, hasBlackHole в traceroute, 3 теста
+- [x] **T21** — Dockerfile: multi-stage + Alpine packages · [plans/21-dockerfile.md](plans/21-dockerfile.md) — iproute2/iputils/bind-tools/traceroute + HEALTHCHECK
+- [x] **T22** — docker-compose.yml · [plans/22-docker-compose.md](plans/22-docker-compose.md) — добавлен env_file (optional)
 
 ---
 
