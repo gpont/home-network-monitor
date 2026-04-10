@@ -1,3 +1,5 @@
+import type { TranslationKey } from './i18n/ru.ts';
+
 export interface WsMessage {
   event: string;
   data: unknown;
@@ -148,21 +150,25 @@ export interface PingStatsEntry {
   avgRttMs: number | null;
 }
 
-export type CheckStatus = 'ok' | 'fail' | 'warn' | 'stale' | 'unknown' | 'info';
+export type CheckStatus = 'ok' | 'fail' | 'warn' | 'stale' | 'unknown';
 
 export interface CheckDefinition {
   id: string;
   layer: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   name: string;
   description: string;
-  /** Plain-language explanation shown in tooltip: what does this check mean for the user? */
   hint: string;
-  /** Explains why data might be missing for this specific check */
-  noDataHint?: string;
+  noDataHint?: TranslationKey;
+  /** Steps shown as yellow warn block when check is 'unknown' due to missing user config */
+  configHint?: TranslationKey[];
+  /** If true, show "Run now" button when status is 'unknown' or 'stale' */
+  runnable?: boolean;
+  /** Type to pass to POST /api/run/:type */
+  runType?: 'speedtest' | 'traceroute' | 'mtu' | 'cgnat' | 'publicip';
   staleAfterMs: number;
   getValue(s: StatusResponse): string | null;
   getStatus(s: StatusResponse): CheckStatus;
-  getFix(s: StatusResponse): string[] | null;
+  getFix(s: StatusResponse): TranslationKey[] | null;
 }
 
 export interface LayerDefinition {
