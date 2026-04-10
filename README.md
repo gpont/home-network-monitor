@@ -31,13 +31,13 @@ cp .env.example .env
 docker-compose up -d
 ```
 
-Open `http://your-server-ip:3000`
+Open `http://your-server-ip:3201`
 
 ## Configuration
 
 | Variable | Default | Description |
 |---|---|---|
-| `PORT` | `3000` | HTTP port the dashboard listens on |
+| `PORT` | `3201` | HTTP port the dashboard listens on |
 | `DB_PATH` | `/app/data/monitor.db` | Path to the SQLite database inside the container |
 | `SSL_HOSTS` | `google.com,cloudflare.com,github.com` | Comma-separated hostnames for SSL certificate checks |
 | `IPERF3_SERVER` | — | IP of an iperf3 server for throughput testing (optional) |

@@ -48,7 +48,7 @@ function parseHttpTargets(env: string | undefined, defaults: string[]) {
 
 export function loadConfig(): Config {
   return {
-    port: parseInt(process.env["PORT"] ?? "3000"),
+    port: parseInt(process.env["PORT"] ?? "3201"),
     dbPath: process.env["DB_PATH"] ?? "/app/data/monitor.db",
 
     pingTargets: parseTargets(process.env["PING_TARGETS"], [

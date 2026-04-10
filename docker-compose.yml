@@ -5,11 +5,11 @@ services:
       dockerfile: Dockerfile
     container_name: home-network-monitor
     ports:
-      - "3000:3000"
+      - "3201:3201"
     volumes:
       - ./data:/app/data
     environment:
-      - PORT=3000
+      - PORT=3201
       - DB_PATH=/app/data/monitor.db
       # Optional: comma-separated list of hosts to check SSL certs for
       # - SSL_HOSTS=google.com,cloudflare.com,github.com
