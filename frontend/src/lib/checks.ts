@@ -39,7 +39,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_up", layer: 1, name: "check.iface_up.name", description: "Сетевой интерфейс в состоянии UP",
     hint: "check.iface_up.hint",
-    noDataHint: "check.iface_up.nodata",
+    noDataHint: "check.iface_up.noData",
     staleAfterMs: STALE.s30,
     getValue: s => s.interface?.interfaceName ?? null,
     getStatus: s => {
@@ -52,7 +52,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_ipv4", layer: 1, name: "check.iface_ipv4.name", description: "IPv4 адрес назначен интерфейсу",
     hint: "check.iface_ipv4.hint",
-    noDataHint: "check.iface_ipv4.nodata",
+    noDataHint: "check.iface_ipv4.noData",
     staleAfterMs: STALE.s30,
     getValue: s => s.interface?.ipv4 ?? null,
     getStatus: s => {
@@ -65,7 +65,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_gateway", layer: 1, name: "check.iface_gateway.name", description: "Шлюз по умолчанию задан",
     hint: "check.iface_gateway.hint",
-    noDataHint: "check.iface_gateway.nodata",
+    noDataHint: "check.iface_gateway.noData",
     staleAfterMs: STALE.s30,
     getValue: s => s.interface?.gatewayIp ?? null,
     getStatus: s => {
@@ -78,7 +78,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_dhcp", layer: 1, name: "check.iface_dhcp.name", description: "Тип подключения определён (DHCP/PPPoE)",
     hint: "check.iface_dhcp.hint",
-    noDataHint: "nodata.docker_bridge",
+    noDataHint: "check.iface_dhcp.noData",
     staleAfterMs: STALE.m5,
     getValue: s => s.interface?.connectionType ?? null,
     getStatus: s => {
@@ -91,7 +91,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_errors", layer: 1, name: "check.iface_errors.name", description: "rx_errors + tx_errors = 0",
     hint: "check.iface_errors.hint",
-    noDataHint: "nodata.docker_bridge",
+    noDataHint: "check.iface_errors.noData",
     staleAfterMs: STALE.s30,
     getValue: s => s.interface ? String(s.interface.rxErrors + s.interface.txErrors) : null,
     getStatus: s => {
@@ -104,7 +104,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_drops", layer: 1, name: "check.iface_drops.name", description: "rx_dropped + tx_dropped = 0",
     hint: "check.iface_drops.hint",
-    noDataHint: "nodata.docker_bridge",
+    noDataHint: "check.iface_drops.noData",
     staleAfterMs: STALE.s30,
     getValue: s => s.interface ? String(s.interface.rxDropped + s.interface.txDropped) : null,
     getStatus: s => {
@@ -117,35 +117,36 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_ipv6_ll", layer: 1, name: "check.iface_ipv6_ll.name", description: "IPv6 link-local адрес (fe80::) назначен",
     hint: "check.iface_ipv6_ll.hint",
-    noDataHint: "nodata.docker_bridge",
+    noDataHint: "check.iface_ipv6_ll.noData",
     staleAfterMs: STALE.s30,
     getValue: s => s.interface?.ipv6LinkLocal ?? null,
     getStatus: s => {
       if (!s.interface) return "unknown";
       if (isStale(s.interface.timestamp, STALE.s30)) return "stale";
-      return s.interface.ipv6LinkLocal ? "ok" : "info";
+      return s.interface.ipv6LinkLocal ? "ok" : "warn";
     },
     getFix: s => !s.interface?.ipv6LinkLocal ? ["check.iface_ipv6_ll.fix.0", "check.iface_ipv6_ll.fix.1"] : null,
   },
   {
     id: "iface_arp", layer: 1, name: "check.iface_arp.name", description: "MAC-адрес шлюза есть в ARP таблице",
     hint: "check.iface_arp.hint",
-    noDataHint: "nodata.docker_bridge",
+    noDataHint: "check.iface_arp.noData",
     staleAfterMs: STALE.m5,
     getValue: s => s.interface?.gatewayMac ?? null,
     getStatus: s => {
       if (!s.interface) return "unknown";
       if (isStale(s.interface.timestamp, STALE.m5)) return "stale";
-      return s.interface.gatewayMac ? "ok" : "info";
+      return s.interface.gatewayMac ? "ok" : "warn";
     },
-    getFix: s => !s.interface?.gatewayMac ? ["check.iface_arp.fix.0", "check.iface_arp.fix.1", "check.iface_arp.fix.2"] : null,
+    getFix: s => !s.interface?.gatewayMac ? ["check.iface_arp.fix.0", "check.iface_arp.fix.1"] : null,
   },
 
   // ── Layer 2: Gateway / Local ──────────────────────────────
   {
     id: "gw_ping", layer: 2, name: "check.gw_ping.name", description: "ICMP ping до роутера — RTT < 5ms",
     hint: "check.gw_ping.hint",
-    noDataHint: "nodata.gw_ping_target",
+    noDataHint: "check.gw_ping.noData",
+    configHint: ["check.gw_ping.config.0", "check.gw_ping.config.1"],
     staleAfterMs: STALE.s30,
     getValue: s => {
       const gw = gwPing(s);
@@ -167,7 +168,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "gw_ping_loss", layer: 2, name: "check.gw_ping_loss.name", description: "Потери пакетов до роутера < 1% за 15 мин",
     hint: "check.gw_ping_loss.hint",
-    noDataHint: "nodata.no_gw_pings",
+    noDataHint: "check.gw_ping_loss.noData",
     staleAfterMs: STALE.m15,
     getValue: s => {
       const gwTarget = gwPing(s)?.target;
@@ -190,7 +191,8 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "gw_dns", layer: 2, name: "check.gw_dns.name", description: "DNS сервер роутера отвечает < 100ms",
     hint: "check.gw_dns.hint",
-    noDataHint: "nodata.add_gw_dns",
+    noDataHint: "check.gw_dns.noData",
+    configHint: ["check.gw_dns.config.0", "check.gw_dns.config.1"],
     staleAfterMs: STALE.s60,
     getValue: s => {
       const gw = s.dns.find(d => !["8.8.8.8","1.1.1.1"].includes(d.server));
@@ -212,6 +214,7 @@ export const CHECKS: CheckDefinition[] = [
     id: "gw_mtu", layer: 2, name: "check.gw_mtu.name", description: "Нет фрагментации пакетов 1500 байт",
     hint: "check.gw_mtu.hint",
     noDataHint: "nodata.mtu_pending",
+    runnable: true, runType: "mtu",
     staleAfterMs: STALE.m15,
     getValue: s => {
       const mtu = s.mtu;
@@ -223,12 +226,12 @@ export const CHECKS: CheckDefinition[] = [
       if (isStale(s.mtu.timestamp, STALE.m15)) return "stale";
       return s.mtu.status === "ok" ? "ok" : s.mtu.status === "fragmentation_detected" ? "warn" : "fail";
     },
-    getFix: s => s.mtu?.status === "fragmentation_detected" ? ["check.gw_mtu.fix.0", "check.gw_mtu.fix.1", "check.gw_mtu.fix.2"] : null,
+    getFix: s => s.mtu?.status === "fragmentation_detected" ? ["check.gw_mtu.fix.0", "check.gw_mtu.fix.1", "check.gw_mtu.fix.2", "check.gw_mtu.fix.3"] : null,
   },
   {
     id: "gw_jitter", layer: 2, name: "check.gw_jitter.name", description: "Нестабильность RTT до роутера < 5ms",
     hint: "check.gw_jitter.hint",
-    noDataHint: "nodata.no_gw_pings",
+    noDataHint: "check.gw_jitter.noData",
     staleAfterMs: STALE.m15,
     getValue: s => {
       const gwTarget = gwPing(s)?.target;
@@ -251,13 +254,13 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_speed", layer: 2, name: "check.iface_speed.name", description: "Информация об интерфейсе (информационный чек)",
     hint: "check.iface_speed.hint",
-    noDataHint: "nodata.docker_bridge",
+    noDataHint: "check.iface_speed.noData",
     staleAfterMs: STALE.s30,
     getValue: s => {
       if (!s.networkStats?.length) return null;
       return s.interface?.interfaceName ?? null;
     },
-    getStatus: s => s.networkStats?.length ? "info" : "unknown",
+    getStatus: s => s.networkStats?.length ? "ok" : "unknown",
     getFix: () => null,
   },
 
@@ -266,6 +269,7 @@ export const CHECKS: CheckDefinition[] = [
     id: "isp_hop", layer: 3, name: "check.isp_hop.name", description: "Первый хоп провайдера доступен",
     hint: "check.isp_hop.hint",
     noDataHint: "nodata.traceroute_pending_isp",
+    runnable: true, runType: "traceroute",
     staleAfterMs: STALE.m10,
     getValue: s => {
       if (!s.traceroute) return null;
@@ -286,6 +290,7 @@ export const CHECKS: CheckDefinition[] = [
     id: "isp_hop_rtt", layer: 3, name: "check.isp_hop_rtt.name", description: "Задержка до первого хопа провайдера < 20ms",
     hint: "check.isp_hop_rtt.hint",
     noDataHint: "nodata.traceroute_isp_hidden",
+    runnable: true, runType: "traceroute",
     staleAfterMs: STALE.m10,
     getValue: s => {
       if (!s.traceroute) return null;
@@ -311,12 +316,12 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "wan_type", layer: 3, name: "check.wan_type.name", description: "Тип подключения к провайдеру определён",
     hint: "check.wan_type.hint",
-    noDataHint: "nodata.docker_bridge",
+    noDataHint: "check.wan_type.noData",
     staleAfterMs: STALE.m5,
     getValue: s => s.interface?.connectionType ?? null,
     getStatus: s => {
       if (!s.interface) return "unknown";
-      return s.interface.connectionType !== "unknown" ? "info" : "unknown";
+      return s.interface.connectionType !== "unknown" ? "ok" : "unknown";
     },
     getFix: () => null,
   },
@@ -324,6 +329,7 @@ export const CHECKS: CheckDefinition[] = [
     id: "cgnat", layer: 3, name: "check.cgnat.name", description: "Публичный IP — не за CGNAT провайдера",
     hint: "check.cgnat.hint",
     noDataHint: "nodata.cgnat_pending",
+    runnable: true, runType: "cgnat",
     staleAfterMs: STALE.h1,
     getValue: s => s.cgnat?.status ?? null,
     getStatus: s => {
@@ -337,6 +343,7 @@ export const CHECKS: CheckDefinition[] = [
     id: "public_ip", layer: 3, name: "check.public_ip.name", description: "Публичный IPv4 адрес получен",
     hint: "check.public_ip.hint",
     noDataHint: "nodata.publicip_pending",
+    runnable: true, runType: "publicip",
     staleAfterMs: STALE.m5,
     getValue: s => s.publicIp?.ipv4 ?? null,
     getStatus: s => {
@@ -350,6 +357,7 @@ export const CHECKS: CheckDefinition[] = [
     id: "route_stable", layer: 3, name: "check.route_stable.name", description: "Маршрут трассировки не изменился",
     hint: "check.route_stable.hint",
     noDataHint: "nodata.traceroute_pending",
+    runnable: true, runType: "traceroute",
     staleAfterMs: STALE.m10,
     getValue: s => s.traceroute ? (s.traceroute.routingChanged ? "ui.value.changed" : "ui.value.stable") : null,
     getStatus: s => {
@@ -362,12 +370,12 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "isp_dns", layer: 3, name: "check.isp_dns.name", description: "Информация о DNS провайдера",
     hint: "check.isp_dns.hint",
-    noDataHint: "nodata.docker_resolver",
+    noDataHint: "check.isp_dns.noData",
     staleAfterMs: STALE.s60,
     getValue: s => s.osResolver?.nameservers?.[0] ?? null,
     getStatus: s => {
       if (!s.osResolver) return "unknown";
-      return s.osResolver.status === "ok" ? "info" : "unknown";
+      return s.osResolver.status === "ok" ? "ok" : "unknown";
     },
     getFix: () => null,
   },
@@ -475,6 +483,7 @@ export const CHECKS: CheckDefinition[] = [
     id: "no_blackhole", layer: 4, name: "check.no_blackhole.name", description: "В traceroute нет 3+ подряд пропущенных хопов",
     hint: "check.no_blackhole.hint",
     noDataHint: "nodata.traceroute_pending",
+    runnable: true, runType: "traceroute",
     staleAfterMs: STALE.m10,
     getValue: s => s.traceroute ? ((s.traceroute as any).hasBlackHole ? "ui.value.detected" : "ui.value.none") : null,
     getStatus: s => {
@@ -489,7 +498,8 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "dns_gw", layer: 5, name: "check.dns_gw.name", description: "DNS сервер роутера возвращает корректный ответ",
     hint: "check.dns_gw.hint",
-    noDataHint: "nodata.add_gw_dns_server",
+    noDataHint: "check.dns_gw.noData",
+    configHint: ["check.dns_gw.config.0", "check.dns_gw.config.1"],
     staleAfterMs: STALE.s60,
     getValue: s => {
       const d = s.dns.find(d => !["8.8.8.8","1.1.1.1"].includes(d.server));
@@ -679,7 +689,7 @@ export const CHECKS: CheckDefinition[] = [
     getValue: s => s.ipv6?.status ?? null,
     getStatus: s => {
       if (!s.ipv6) return "unknown";
-      return s.ipv6.status === "ok" ? "info" : "info";
+      return s.ipv6?.status === "ok" ? "ok" : "unknown";
     },
     getFix: () => null,
   },
@@ -687,12 +697,13 @@ export const CHECKS: CheckDefinition[] = [
     id: "speedtest", layer: 6, name: "check.speedtest.name", description: "Скорость загрузки/выгрузки",
     hint: "check.speedtest.hint",
     noDataHint: "nodata.speedtest_pending",
+    runnable: true, runType: "speedtest",
     staleAfterMs: STALE.h1,
     getValue: s => s.speedtest ? `↓${s.speedtest.downloadMbps.toFixed(1)} ↑${s.speedtest.uploadMbps.toFixed(1)} Mbps` : null,
     getStatus: s => {
       if (!s.speedtest) return "unknown";
       if (isStale(s.speedtest.timestamp, STALE.h1)) return "stale";
-      return "info";
+      return "ok";
     },
     getFix: () => null,
   },
@@ -714,7 +725,8 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "ssl", layer: 7, name: "check.ssl.name", description: "Все SSL сертификаты действительны > 30 дней",
     hint: "check.ssl.hint",
-    noDataHint: "nodata.ssl_pending",
+    noDataHint: "check.ssl.noData",
+    configHint: ["check.ssl.config.0", "check.ssl.config.1"],
     staleAfterMs: STALE.h24,
     getValue: s => {
       if (!s.ssl?.length) return null;
@@ -734,16 +746,17 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "tls_ver", layer: 7, name: "check.tls_ver.name", description: "TLS ≥ 1.2 на всех хостах",
     hint: "check.tls_ver.hint",
-    noDataHint: "nodata.ssl_pending",
+    noDataHint: "check.tls_ver.noData",
     staleAfterMs: STALE.h24,
     getValue: s => s.ssl?.length ? "TLS 1.2+" : null,
-    getStatus: s => s.ssl?.length ? "info" : "unknown",
+    getStatus: s => s.ssl?.length ? "ok" : "unknown",
     getFix: () => null,
   },
   {
     id: "path_mtu", layer: 7, name: "check.path_mtu.name", description: "Нет фрагментации пакетов до интернета",
     hint: "check.path_mtu.hint",
     noDataHint: "nodata.mtu_check_pending",
+    runnable: true, runType: "mtu",
     staleAfterMs: STALE.m15,
     getValue: s => {
       if (!s.mtu) return null;
@@ -754,7 +767,7 @@ export const CHECKS: CheckDefinition[] = [
       if (isStale(s.mtu.timestamp, STALE.m15)) return "stale";
       return s.mtu.status === "ok" ? "ok" : s.mtu.status === "fragmentation_detected" ? "warn" : "fail";
     },
-    getFix: s => s.mtu?.status !== "ok" ? ["check.path_mtu.fix.0", "check.path_mtu.fix.1", "check.path_mtu.fix.2"] : null,
+    getFix: s => s.mtu?.status !== "ok" ? ["check.path_mtu.fix.0", "check.path_mtu.fix.1", "check.path_mtu.fix.2", "check.path_mtu.fix.3"] : null,
   },
   {
     id: "ipv6_global", layer: 7, name: "check.ipv6_global.name", description: "Глобальное IPv6 подключение работает",
@@ -765,7 +778,7 @@ export const CHECKS: CheckDefinition[] = [
     getStatus: s => {
       if (!s.ipv6) return "unknown";
       if (isStale(s.ipv6.timestamp, STALE.s30)) return "stale";
-      return s.ipv6.status === "ok" ? "ok" : "info";
+      return s.ipv6.status === "ok" ? "ok" : "warn";
     },
     getFix: s => s.ipv6?.status !== "ok" ? ["check.ipv6_global.fix.0", "check.ipv6_global.fix.1", "check.ipv6_global.fix.2"] : null,
   },
@@ -799,6 +812,7 @@ export const CHECKS: CheckDefinition[] = [
     id: "route_stable_sec", layer: 7, name: "check.route_stable_sec.name", description: "Маршрут трассировки не менялся",
     hint: "check.route_stable_sec.hint",
     noDataHint: "nodata.traceroute_pending",
+    runnable: true, runType: "traceroute",
     staleAfterMs: STALE.m10,
     getValue: s => s.traceroute ? (s.traceroute.routingChanged ? "ui.value.changed" : "ui.value.stable") : null,
     getStatus: s => {
@@ -811,7 +825,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "os_resolver", layer: 7, name: "check.os_resolver.name", description: "/etc/resolv.conf содержит nameserver",
     hint: "check.os_resolver.hint",
-    noDataHint: "nodata.docker_resolver",
+    noDataHint: "check.os_resolver.noData",
     staleAfterMs: STALE.m5,
     getValue: s => s.osResolver?.nameservers?.[0] ?? null,
     getStatus: s => {
@@ -837,7 +851,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_anomaly", layer: 7, name: "check.iface_anomaly.name", description: "Нет резкого роста ошибок/дропов",
     hint: "check.iface_anomaly.hint",
-    noDataHint: "nodata.docker_bridge",
+    noDataHint: "check.iface_anomaly.noData",
     staleAfterMs: STALE.s30,
     getValue: s => s.interface ? `${s.interface.rxErrors + s.interface.txErrors + s.interface.rxDropped + s.interface.txDropped}` : null,
     getStatus: s => {

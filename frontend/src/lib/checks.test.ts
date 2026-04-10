@@ -75,3 +75,37 @@ describe("LAYERS", () => {
     }
   });
 });
+
+describe("remapped info checks", () => {
+  test("iface_speed returns ok when networkStats present (not info)", () => {
+    const s = { ...emptyStatus(), networkStats: [{ interface: "en0", rxBytes: 1000, txBytes: 500, rxErrors: 0, txErrors: 0, rxDropped: 0, txDropped: 0, timestamp: Date.now() }] };
+    expect(CHECKS.find(c => c.id === "iface_speed")!.getStatus(s as any)).toBe("ok");
+  });
+  test("iface_speed returns unknown when no networkStats", () => {
+    expect(CHECKS.find(c => c.id === "iface_speed")!.getStatus(emptyStatus())).toBe("unknown");
+  });
+  test("iface_ipv6_ll returns warn when no IPv6 LL (not info)", () => {
+    const s = { ...emptyStatus(), interface: { interfaceName: "en0", status: "up" as const, ipv4: "192.168.1.5", ipv6LinkLocal: null, gatewayIp: "192.168.1.1", gatewayMac: null, connectionType: "dhcp" as const, rxErrors: 0, txErrors: 0, rxDropped: 0, txDropped: 0, timestamp: Date.now() } };
+    expect(CHECKS.find(c => c.id === "iface_ipv6_ll")!.getStatus(s)).toBe("warn");
+  });
+  test("iface_ipv6_ll returns ok when IPv6 LL present", () => {
+    const s = { ...emptyStatus(), interface: { interfaceName: "en0", status: "up" as const, ipv4: "192.168.1.5", ipv6LinkLocal: "fe80::1", gatewayIp: "192.168.1.1", gatewayMac: null, connectionType: "dhcp" as const, rxErrors: 0, txErrors: 0, rxDropped: 0, txDropped: 0, timestamp: Date.now() } };
+    expect(CHECKS.find(c => c.id === "iface_ipv6_ll")!.getStatus(s)).toBe("ok");
+  });
+  test("iface_arp returns warn when no gateway MAC (not info)", () => {
+    const s = { ...emptyStatus(), interface: { interfaceName: "en0", status: "up" as const, ipv4: "192.168.1.5", ipv6LinkLocal: null, gatewayIp: "192.168.1.1", gatewayMac: null, connectionType: "dhcp" as const, rxErrors: 0, txErrors: 0, rxDropped: 0, txDropped: 0, timestamp: Date.now() } };
+    expect(CHECKS.find(c => c.id === "iface_arp")!.getStatus(s)).toBe("warn");
+  });
+  test("iface_arp returns ok when gateway MAC present", () => {
+    const s = { ...emptyStatus(), interface: { interfaceName: "en0", status: "up" as const, ipv4: "192.168.1.5", ipv6LinkLocal: null, gatewayIp: "192.168.1.1", gatewayMac: "aa:bb:cc:dd:ee:ff", connectionType: "dhcp" as const, rxErrors: 0, txErrors: 0, rxDropped: 0, txDropped: 0, timestamp: Date.now() } };
+    expect(CHECKS.find(c => c.id === "iface_arp")!.getStatus(s)).toBe("ok");
+  });
+  test("wan_type returns ok when connectionType known (not info)", () => {
+    const s = { ...emptyStatus(), interface: { interfaceName: "en0", status: "up" as const, ipv4: "192.168.1.5", ipv6LinkLocal: null, gatewayIp: "192.168.1.1", gatewayMac: null, connectionType: "dhcp" as const, rxErrors: 0, txErrors: 0, rxDropped: 0, txDropped: 0, timestamp: Date.now() } };
+    expect(CHECKS.find(c => c.id === "wan_type")!.getStatus(s)).toBe("ok");
+  });
+  test("speedtest returns ok when data present (not info)", () => {
+    const s = { ...emptyStatus(), speedtest: { downloadMbps: 100, uploadMbps: 50, latencyMs: 20, timestamp: Date.now() } };
+    expect(CHECKS.find(c => c.id === "speedtest")!.getStatus(s as any)).toBe("ok");
+  });
+});
