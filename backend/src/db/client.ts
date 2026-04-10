@@ -4,7 +4,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import * as schema from "./schema.ts";
 
-const DB_PATH = process.env["DB_PATH"] ?? "/app/data/monitor.db";
+const DB_PATH = process.env["DB_PATH"] ?? (process.platform === "linux" ? "/app/data/monitor.db" : "./data/monitor.db");
 
 mkdirSync(dirname(DB_PATH), { recursive: true });
 const sqlite = new Database(DB_PATH, { create: true });
