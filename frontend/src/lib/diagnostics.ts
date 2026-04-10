@@ -14,9 +14,9 @@ function internetFail(s: StatusResponse): boolean {
 const RULES: DiagnosticRule[] = [
   {
     id: "R1", severity: "critical",
-    title: "Полный обрыв сети",
-    description: "Нет связи ни с роутером, ни с интернетом",
-    steps: ["Проверь кабель питания роутера", "Проверь кабель между сервером и роутером", "Перезагрузи роутер", "Проверь статус интерфейса: ip link show"],
+    title: "diag.R1.title",
+    description: "diag.R1.desc",
+    steps: ["diag.R1.step.0", "diag.R1.step.1", "diag.R1.step.2", "diag.R1.step.3"],
     condition: s => {
       const gwFail = !gwOk(s) && s.ping.length > 0;
       const netFail = internetFail(s);
@@ -26,9 +26,9 @@ const RULES: DiagnosticRule[] = [
   },
   {
     id: "R2", severity: "critical",
-    title: "Роутер недоступен",
-    description: "Интерфейс поднят, но роутер не отвечает на ping и ARP",
-    steps: ["Проверь кабель между сервером и роутером", "Убедись что роутер включён", "Попробуй: arp -n", "Перезагрузи роутер"],
+    title: "diag.R2.title",
+    description: "diag.R2.desc",
+    steps: ["diag.R2.step.0", "diag.R2.step.1", "diag.R2.step.2", "diag.R2.step.3"],
     condition: s => {
       if (!gwOk(s) && s.ping.length > 0) {
         const ifaceUp = s.interface?.status === "up";
@@ -40,16 +40,16 @@ const RULES: DiagnosticRule[] = [
   },
   {
     id: "R3", severity: "critical",
-    title: "Нет интернета — проблема у провайдера",
-    description: "Роутер доступен, но интернет недоступен",
-    steps: ["Позвони провайдеру", "Проверь статус оборудования провайдера", "Попробуй перезагрузить роутер", "Проверь баланс на счёте"],
+    title: "diag.R3.title",
+    description: "diag.R3.desc",
+    steps: ["diag.R3.step.0", "diag.R3.step.1", "diag.R3.step.2", "diag.R3.step.3"],
     condition: s => gwOk(s) && internetFail(s),
   },
   {
     id: "R4", severity: "warning",
-    title: "DNS не работает, IP-связь есть",
-    description: "Ping и TCP работают, но все DNS серверы не отвечают",
-    steps: ["Временно поменяй DNS: echo 'nameserver 8.8.8.8' > /etc/resolv.conf", "Перезагрузи роутер", "Проверь настройки DNS на роутере"],
+    title: "diag.R4.title",
+    description: "diag.R4.desc",
+    steps: ["diag.R4.step.0", "diag.R4.step.1", "diag.R4.step.2"],
     condition: s => {
       const p8 = s.ping.find(p => p.target === "8.8.8.8");
       const tcpOk = s.tcpConnect?.status === "ok";
@@ -59,9 +59,9 @@ const RULES: DiagnosticRule[] = [
   },
   {
     id: "R5", severity: "warning",
-    title: "DNS роутера сломан, внешние работают",
-    description: "DNS роутера не отвечает, 8.8.8.8 работает",
-    steps: ["Перезагрузи роутер", "Измени DNS на роутере на 8.8.8.8", "Временно используй внешний DNS"],
+    title: "diag.R5.title",
+    description: "diag.R5.desc",
+    steps: ["diag.R5.step.0", "diag.R5.step.1", "diag.R5.step.2"],
     condition: s => {
       const gwDns = s.dns.find(d => !["8.8.8.8","1.1.1.1"].includes(d.server));
       const extDns = s.dns.find(d => d.server === "8.8.8.8");
@@ -70,16 +70,16 @@ const RULES: DiagnosticRule[] = [
   },
   {
     id: "R6", severity: "warning",
-    title: "DNS hijacking — перехват запросов",
-    description: "DNS запросы перехватываются или NXDOMAIN не работает",
-    steps: ["Используй DNS-over-HTTPS", "Включи DoH в браузере", "Рассмотри использование VPN", "Проверь настройки роутера"],
+    title: "diag.R6.title",
+    description: "diag.R6.desc",
+    steps: ["diag.R6.step.0", "diag.R6.step.1", "diag.R6.step.2", "diag.R6.step.3"],
     condition: s => s.dnsExtra?.hijacking === "hijacked" || s.dnsExtra?.nxdomain === "fail",
   },
   {
     id: "R7", severity: "warning",
-    title: "Нестабильное соединение — потери пакетов",
-    description: "Packet loss > 5% за последние 15 минут",
-    steps: ["Проверь кабель провайдера", "Свяжись с провайдером", "Проверь качество WiFi сигнала", "Смотри: mtr 8.8.8.8"],
+    title: "diag.R7.title",
+    description: "diag.R7.desc",
+    steps: ["diag.R7.step.0", "diag.R7.step.1", "diag.R7.step.2", "diag.R7.step.3"],
     condition: s => {
       if (!s.pingStats) return false;
       const maxLoss = Math.max(...Object.values(s.pingStats).map((t: PingStatsEntry) => t.lossPercent));
@@ -88,23 +88,23 @@ const RULES: DiagnosticRule[] = [
   },
   {
     id: "R8", severity: "warning",
-    title: "Проблема MTU — фрагментация",
-    description: "Обнаружена фрагментация пакетов",
-    steps: ["Уменьши MTU до 1492 (PPPoE)", "Уменьши MTU до 1480 (tunnel)", "Проверь настройки MTU на роутере", "Команда: ip link set eth0 mtu 1492"],
+    title: "diag.R8.title",
+    description: "diag.R8.desc",
+    steps: ["diag.R8.step.0", "diag.R8.step.1", "diag.R8.step.2", "diag.R8.step.3"],
     condition: s => s.mtu?.status === "fragmentation_detected" || s.mtu?.status === "error",
   },
   {
     id: "R9", severity: "info",
-    title: "CGNAT — ты за NAT провайдера",
-    description: "Твой публичный IP принадлежит провайдеру (100.64.0.0/10)",
-    steps: ["Port forwarding не будет работать", "Запроси у провайдера выделенный IP", "Рассмотри VPN с port forwarding"],
+    title: "diag.R9.title",
+    description: "diag.R9.desc",
+    steps: ["diag.R9.step.0", "diag.R9.step.1", "diag.R9.step.2"],
     condition: s => s.cgnat?.status === "cgnat",
   },
   {
     id: "R10", severity: "warning",
-    title: "HTTP заблокирован",
-    description: "Ping и DNS работают, но HTTP/HTTPS заблокирован",
-    steps: ["Проверь настройки фаервола", "Попробуй другой браузер", "Возможна блокировка провайдером", "Рассмотри использование VPN"],
+    title: "diag.R10.title",
+    description: "diag.R10.desc",
+    steps: ["diag.R10.step.0", "diag.R10.step.1", "diag.R10.step.2", "diag.R10.step.3"],
     condition: s => {
       const p8 = s.ping.find(p => p.target === "8.8.8.8");
       const extDns = s.dns.find(d => d.server === "8.8.8.8");
@@ -114,9 +114,9 @@ const RULES: DiagnosticRule[] = [
   },
   {
     id: "R11", severity: "info",
-    title: "IPv6 не работает",
-    description: "IPv4 работает, IPv6 недоступен",
-    steps: ["Узнай у провайдера поддержку IPv6", "Настрой IPv6 tunnel (Hurricane Electric)", "Или игнорируй — IPv4 достаточно"],
+    title: "diag.R11.title",
+    description: "diag.R11.desc",
+    steps: ["diag.R11.step.0", "diag.R11.step.1", "diag.R11.step.2"],
     condition: s => {
       const p8 = s.ping.find(p => p.target === "8.8.8.8");
       return p8?.status === "ok" && s.ipv6?.status !== "ok" && s.ipv6 !== null;
@@ -124,9 +124,9 @@ const RULES: DiagnosticRule[] = [
   },
   {
     id: "R12", severity: "warning",
-    title: "Высокая задержка у провайдера",
-    description: "Шлюз близко, но первый хоп провайдера далеко",
-    steps: ["Свяжись с провайдером", "Проверь качество линии", "Запроси диагностику у провайдера"],
+    title: "diag.R12.title",
+    description: "diag.R12.desc",
+    steps: ["diag.R12.step.0", "diag.R12.step.1", "diag.R12.step.2"],
     condition: s => {
       const gw = s.ping.find(p => p.targetLabel?.toLowerCase().includes("router"));
       if (!gw || !s.traceroute) return false;
