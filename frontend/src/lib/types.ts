@@ -37,6 +37,7 @@ export interface TracerouteResult {
   target: string;
   hops: Array<{ hop: number; ip: string | null; rttMs: number | null }>;
   routingChanged: boolean;
+  hasBlackHole?: boolean;
   timestamp: number;
 }
 
@@ -87,6 +88,98 @@ export interface NetworkStat {
   timestamp: number;
 }
 
+export interface InterfaceCheck {
+  interfaceName: string;
+  status: 'up' | 'down' | 'unknown';
+  ipv4: string | null;
+  ipv6LinkLocal: string | null;
+  gatewayIp: string | null;
+  gatewayMac: string | null;
+  connectionType: 'dhcp' | 'pppoe' | 'static' | 'unknown';
+  rxErrors: number;
+  txErrors: number;
+  rxDropped: number;
+  txDropped: number;
+  timestamp: number;
+}
+
+export interface TcpConnectResult {
+  host: string;
+  port: number;
+  status: 'ok' | 'timeout' | 'error';
+  latencyMs: number | null;
+  timestamp: number;
+}
+
+export interface DnsExtraCheck {
+  consistency: 'ok' | 'mismatch' | 'unknown';
+  nxdomain: 'ok' | 'fail';
+  hijacking: 'ok' | 'hijacked' | 'unknown';
+  doh: 'ok' | 'fail' | 'unknown';
+  dnsLeak: 'ok' | 'leak' | 'unknown';
+  timestamp: number;
+}
+
+export interface CaptivePortalCheck {
+  status: 'clean' | 'detected' | 'error';
+  timestamp: number;
+}
+
+export interface HttpRedirectCheck {
+  status: 'ok' | 'intercepted' | 'error';
+  timestamp: number;
+}
+
+export interface NtpCheck {
+  status: 'ok' | 'fail';
+  driftMs: number | null;
+  timestamp: number;
+}
+
+export interface OsResolverCheck {
+  status: 'ok' | 'fail';
+  nameservers: string[];
+  timestamp: number;
+}
+
+export interface PingStatsEntry {
+  lossPercent: number;
+  jitterMs: number | null;
+  avgRttMs: number | null;
+}
+
+export interface PingStatsCheck {
+  targets: Record<string, PingStatsEntry>;
+}
+
+export type CheckStatus = 'ok' | 'fail' | 'warn' | 'stale' | 'unknown' | 'info';
+
+export interface CheckDefinition {
+  id: string;
+  layer: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  name: string;
+  description: string;
+  staleAfterMs: number;
+  getValue(s: StatusResponse): string | null;
+  getStatus(s: StatusResponse): CheckStatus;
+  getFix(s: StatusResponse): string[] | null;
+}
+
+export interface LayerDefinition {
+  id: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  name: string;
+  icon: string;
+}
+
+export interface DiagnosticRule {
+  id: string;
+  severity: 'critical' | 'warning' | 'info';
+  condition(s: StatusResponse): boolean;
+  title: string;
+  description: string;
+  steps: string[];
+}
+
 export interface StatusResponse {
   ping: PingResult[];
   dns: DnsResult[];
@@ -100,6 +193,14 @@ export interface StatusResponse {
   dhcp: MiscCheck | null;
   ssl: SslCheck[];
   networkStats: NetworkStat[];
+  interface: InterfaceCheck | null;
+  tcpConnect: TcpConnectResult | null;
+  dnsExtra: DnsExtraCheck | null;
+  captivePortal: CaptivePortalCheck | null;
+  httpRedirect: HttpRedirectCheck | null;
+  ntp: NtpCheck | null;
+  osResolver: OsResolverCheck | null;
+  pingStats: PingStatsCheck | null;
 }
 
 export interface PingStats {
