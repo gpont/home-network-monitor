@@ -25,7 +25,7 @@ WORKDIR /app
 
 # Install backend dependencies (only production deps)
 COPY package.json .npmrc ./
-RUN bun install --production
+RUN bun install --production --ignore-scripts
 
 # Copy backend source
 COPY backend/src ./backend/src
