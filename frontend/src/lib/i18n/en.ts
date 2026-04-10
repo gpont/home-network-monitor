@@ -402,6 +402,42 @@ const en: Record<TranslationKey, string> = {
   'diag.R12.step.0':  'Contact your ISP',
   'diag.R12.step.1':  'Check line quality',
   'diag.R12.step.2':  'Request diagnostics from ISP',
+
+  // ── getValue translatable values ─────────────────────────
+  'ui.value.stable':   'stable',
+  'ui.value.changed':  'changed',
+  'ui.value.detected': 'detected',
+  'ui.value.none':     'none',
+  'ui.days_abbr':      'd',
+
+  // ── noData messages ───────────────────────────────────────
+  'nodata.docker_bridge':          'Unavailable inside Docker with bridge network. Works with network_mode: host on Linux.',
+  'nodata.docker_resolver':        "Unavailable inside Docker with bridge network — container's /etc/resolv.conf, not host's.",
+  'nodata.gw_ping_target':         "Check targets a host labeled 'Router'. Add router to PING_TARGETS with label containing 'router'.",
+  'nodata.no_gw_pings':            "No gateway ping data — see hint for 'Gateway ping'.",
+  'nodata.add_gw_dns':             'No DNS server besides 8.8.8.8/1.1.1.1 configured. Add router IP to DNS_SERVERS.',
+  'nodata.mtu_pending':            'MTU data not yet collected (interval: 15 min).',
+  'nodata.traceroute_pending':     'Traceroute not yet run (interval: 10 min).',
+  'nodata.traceroute_pending_isp': 'Traceroute not yet run (interval: 10 min) or all hops hidden by ISP.',
+  'nodata.traceroute_isp_hidden':  'Traceroute unavailable or ISP hides first hop (**).',
+  'nodata.cgnat_pending':          'CGNAT data not yet collected (interval: 1 hr).',
+  'nodata.publicip_pending':       'Public IP request not yet made (interval: 5 min).',
+  'nodata.ping_pending':           'Ping data not yet collected (interval: 30 sec).',
+  'nodata.tcp_pending':            'TCP check data not yet collected (interval: 30 sec).',
+  'nodata.pingstat_pending':       'Ping statistics not yet accumulated (~15 min needed).',
+  'nodata.jitter_pending':         'Jitter data not yet accumulated (~15 min needed).',
+  'nodata.add_gw_dns_server':      'No router DNS server configured. Add router IP to DNS_SERVERS.',
+  'nodata.dns_pending':            'DNS data not yet collected (interval: 60 sec).',
+  'nodata.dns_extended_pending':   'Extended DNS checks not yet run (interval: 5 min).',
+  'nodata.http_pending':           'HTTP checks not yet run (interval: 60 sec).',
+  'nodata.http_redirect_pending':  'HTTP redirect check not yet run (interval: 60 sec).',
+  'nodata.ipv6_pending':           'IPv6 check not yet run (interval: 30 sec).',
+  'nodata.speedtest_pending':      'Speedtest runs once an hour. Wait for the next cycle or restart the container.',
+  'nodata.captive_portal_pending': 'Captive portal check not yet run (interval: 60 sec).',
+  'nodata.ssl_pending':            'SSL checks not yet run (interval: 24 hr). Or SSL_HOSTS is not configured.',
+  'nodata.mtu_check_pending':      'MTU check not yet run (interval: 15 min).',
+  'nodata.ntp_pending':            'NTP check not yet run (interval: 5 min).',
+  'nodata.publicip_stable_pending':'Public IP data not yet collected (interval: 5 min).',
 };
 
 export default en;

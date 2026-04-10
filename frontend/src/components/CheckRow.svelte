@@ -51,7 +51,7 @@
           style="font-weight: 500; font-size: 13px; color: {isNoData ? '#4b5563' : '#e2e8f0'}; cursor: help;"
         >{$t(check.name)}</span>
         {#if !isNoData && val}
-          <span style="font-size: 12px; color: {color}; font-weight: 500;">{val}</span>
+          <span style="font-size: 12px; color: {color}; font-weight: 500;">{$t(val)}</span>
         {/if}
       </div>
       {#if isNoData}

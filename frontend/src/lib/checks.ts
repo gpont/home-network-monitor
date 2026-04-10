@@ -78,7 +78,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_dhcp", layer: 1, name: "check.iface_dhcp.name", description: "Тип подключения определён (DHCP/PPPoE)",
     hint: "check.iface_dhcp.hint",
-    noDataHint: "Недоступно внутри Docker с bridge-сетью. Работает при network_mode: host на Linux.",
+    noDataHint: "nodata.docker_bridge",
     staleAfterMs: STALE.m5,
     getValue: s => s.interface?.connectionType ?? null,
     getStatus: s => {
@@ -91,7 +91,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_errors", layer: 1, name: "check.iface_errors.name", description: "rx_errors + tx_errors = 0",
     hint: "check.iface_errors.hint",
-    noDataHint: "Недоступно внутри Docker с bridge-сетью. Работает при network_mode: host на Linux.",
+    noDataHint: "nodata.docker_bridge",
     staleAfterMs: STALE.s30,
     getValue: s => s.interface ? String(s.interface.rxErrors + s.interface.txErrors) : null,
     getStatus: s => {
@@ -104,7 +104,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_drops", layer: 1, name: "check.iface_drops.name", description: "rx_dropped + tx_dropped = 0",
     hint: "check.iface_drops.hint",
-    noDataHint: "Недоступно внутри Docker с bridge-сетью. Работает при network_mode: host на Linux.",
+    noDataHint: "nodata.docker_bridge",
     staleAfterMs: STALE.s30,
     getValue: s => s.interface ? String(s.interface.rxDropped + s.interface.txDropped) : null,
     getStatus: s => {
@@ -117,7 +117,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_ipv6_ll", layer: 1, name: "check.iface_ipv6_ll.name", description: "IPv6 link-local адрес (fe80::) назначен",
     hint: "check.iface_ipv6_ll.hint",
-    noDataHint: "Недоступно внутри Docker с bridge-сетью. Работает при network_mode: host на Linux.",
+    noDataHint: "nodata.docker_bridge",
     staleAfterMs: STALE.s30,
     getValue: s => s.interface?.ipv6LinkLocal ?? null,
     getStatus: s => {
@@ -130,7 +130,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_arp", layer: 1, name: "check.iface_arp.name", description: "MAC-адрес шлюза есть в ARP таблице",
     hint: "check.iface_arp.hint",
-    noDataHint: "Недоступно внутри Docker с bridge-сетью. Работает при network_mode: host на Linux.",
+    noDataHint: "nodata.docker_bridge",
     staleAfterMs: STALE.m5,
     getValue: s => s.interface?.gatewayMac ?? null,
     getStatus: s => {
@@ -145,7 +145,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "gw_ping", layer: 2, name: "check.gw_ping.name", description: "ICMP ping до роутера — RTT < 5ms",
     hint: "check.gw_ping.hint",
-    noDataHint: "Чек настроен на цель с меткой 'Router'. Добавь роутер в PING_TARGETS с меткой содержащей 'router'.",
+    noDataHint: "nodata.gw_ping_target",
     staleAfterMs: STALE.s30,
     getValue: s => {
       const gw = gwPing(s);
@@ -167,7 +167,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "gw_ping_loss", layer: 2, name: "check.gw_ping_loss.name", description: "Потери пакетов до роутера < 1% за 15 мин",
     hint: "check.gw_ping_loss.hint",
-    noDataHint: "Нет данных о пингах до роутера — см. подсказку для 'Ping шлюза'.",
+    noDataHint: "nodata.no_gw_pings",
     staleAfterMs: STALE.m15,
     getValue: s => {
       const gwTarget = gwPing(s)?.target;
@@ -190,7 +190,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "gw_dns", layer: 2, name: "check.gw_dns.name", description: "DNS сервер роутера отвечает < 100ms",
     hint: "check.gw_dns.hint",
-    noDataHint: "Нет DNS-сервера кроме 8.8.8.8/1.1.1.1 в настройках. Добавь IP роутера в DNS_SERVERS.",
+    noDataHint: "nodata.add_gw_dns",
     staleAfterMs: STALE.s60,
     getValue: s => {
       const gw = s.dns.find(d => !["8.8.8.8","1.1.1.1"].includes(d.server));
@@ -211,7 +211,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "gw_mtu", layer: 2, name: "check.gw_mtu.name", description: "Нет фрагментации пакетов 1500 байт",
     hint: "check.gw_mtu.hint",
-    noDataHint: "Данные MTU ещё не собраны (интервал 15 минут).",
+    noDataHint: "nodata.mtu_pending",
     staleAfterMs: STALE.m15,
     getValue: s => {
       const mtu = s.mtu;
@@ -228,7 +228,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "gw_jitter", layer: 2, name: "check.gw_jitter.name", description: "Нестабильность RTT до роутера < 5ms",
     hint: "check.gw_jitter.hint",
-    noDataHint: "Нет данных о пингах до роутера — см. подсказку для 'Ping шлюза'.",
+    noDataHint: "nodata.no_gw_pings",
     staleAfterMs: STALE.m15,
     getValue: s => {
       const gwTarget = gwPing(s)?.target;
@@ -251,7 +251,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_speed", layer: 2, name: "check.iface_speed.name", description: "Информация об интерфейсе (информационный чек)",
     hint: "check.iface_speed.hint",
-    noDataHint: "Недоступно внутри Docker с bridge-сетью. Работает при network_mode: host на Linux.",
+    noDataHint: "nodata.docker_bridge",
     staleAfterMs: STALE.s30,
     getValue: s => {
       if (!s.networkStats?.length) return null;
@@ -265,7 +265,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "isp_hop", layer: 3, name: "check.isp_hop.name", description: "Первый хоп провайдера доступен",
     hint: "check.isp_hop.hint",
-    noDataHint: "Traceroute ещё не выполнен (интервал 10 минут) или все хопы скрыты провайдером.",
+    noDataHint: "nodata.traceroute_pending_isp",
     staleAfterMs: STALE.m10,
     getValue: s => {
       if (!s.traceroute) return null;
@@ -285,7 +285,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "isp_hop_rtt", layer: 3, name: "check.isp_hop_rtt.name", description: "Задержка до первого хопа провайдера < 20ms",
     hint: "check.isp_hop_rtt.hint",
-    noDataHint: "Данные traceroute недоступны или провайдер скрывает первый хоп (**).",
+    noDataHint: "nodata.traceroute_isp_hidden",
     staleAfterMs: STALE.m10,
     getValue: s => {
       if (!s.traceroute) return null;
@@ -311,7 +311,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "wan_type", layer: 3, name: "check.wan_type.name", description: "Тип подключения к провайдеру определён",
     hint: "check.wan_type.hint",
-    noDataHint: "Недоступно внутри Docker с bridge-сетью. Работает при network_mode: host на Linux.",
+    noDataHint: "nodata.docker_bridge",
     staleAfterMs: STALE.m5,
     getValue: s => s.interface?.connectionType ?? null,
     getStatus: s => {
@@ -323,7 +323,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "cgnat", layer: 3, name: "check.cgnat.name", description: "Публичный IP — не за CGNAT провайдера",
     hint: "check.cgnat.hint",
-    noDataHint: "Данные CGNAT ещё не собраны (интервал 1 час).",
+    noDataHint: "nodata.cgnat_pending",
     staleAfterMs: STALE.h1,
     getValue: s => s.cgnat?.status ?? null,
     getStatus: s => {
@@ -336,7 +336,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "public_ip", layer: 3, name: "check.public_ip.name", description: "Публичный IPv4 адрес получен",
     hint: "check.public_ip.hint",
-    noDataHint: "Запрос публичного IP ещё не выполнен (интервал 5 минут).",
+    noDataHint: "nodata.publicip_pending",
     staleAfterMs: STALE.m5,
     getValue: s => s.publicIp?.ipv4 ?? null,
     getStatus: s => {
@@ -349,9 +349,9 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "route_stable", layer: 3, name: "check.route_stable.name", description: "Маршрут трассировки не изменился",
     hint: "check.route_stable.hint",
-    noDataHint: "Traceroute ещё не выполнен (интервал 10 минут).",
+    noDataHint: "nodata.traceroute_pending",
     staleAfterMs: STALE.m10,
-    getValue: s => s.traceroute ? (s.traceroute.routingChanged ? "изменён" : "стабилен") : null,
+    getValue: s => s.traceroute ? (s.traceroute.routingChanged ? "ui.value.changed" : "ui.value.stable") : null,
     getStatus: s => {
       if (!s.traceroute) return "unknown";
       if (isStale(s.traceroute.timestamp, STALE.m10)) return "stale";
@@ -362,7 +362,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "isp_dns", layer: 3, name: "check.isp_dns.name", description: "Информация о DNS провайдера",
     hint: "check.isp_dns.hint",
-    noDataHint: "Недоступно внутри Docker с bridge-сетью — /etc/resolv.conf контейнера, не хоста.",
+    noDataHint: "nodata.docker_resolver",
     staleAfterMs: STALE.s60,
     getValue: s => s.osResolver?.nameservers?.[0] ?? null,
     getStatus: s => {
@@ -376,7 +376,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "ping_8888", layer: 4, name: "check.ping_8888.name", description: "ICMP ping до Google DNS — RTT < 50ms",
     hint: "check.ping_8888.hint",
-    noDataHint: "Данные пинга ещё не собраны (интервал 30 секунд).",
+    noDataHint: "nodata.ping_pending",
     staleAfterMs: STALE.s30,
     getValue: s => { const p = pingFor(s, "8.8.8.8"); return p?.rttMs != null ? `${p.rttMs.toFixed(1)}ms` : null; },
     getStatus: s => {
@@ -391,7 +391,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "ping_1111", layer: 4, name: "check.ping_1111.name", description: "ICMP ping до Cloudflare DNS — RTT < 50ms",
     hint: "check.ping_1111.hint",
-    noDataHint: "Данные пинга ещё не собраны (интервал 30 секунд).",
+    noDataHint: "nodata.ping_pending",
     staleAfterMs: STALE.s30,
     getValue: s => { const p = pingFor(s, "1.1.1.1"); return p?.rttMs != null ? `${p.rttMs.toFixed(1)}ms` : null; },
     getStatus: s => {
@@ -406,7 +406,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "ping_9999", layer: 4, name: "check.ping_9999.name", description: "ICMP ping до Quad9 DNS — RTT < 100ms",
     hint: "check.ping_9999.hint",
-    noDataHint: "Данные пинга ещё не собраны (интервал 30 секунд).",
+    noDataHint: "nodata.ping_pending",
     staleAfterMs: STALE.s30,
     getValue: s => { const p = pingFor(s, "9.9.9.9"); return p?.rttMs != null ? `${p.rttMs.toFixed(1)}ms` : null; },
     getStatus: s => {
@@ -421,7 +421,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "tcp_443", layer: 4, name: "check.tcp_443.name", description: "TCP соединение к 1.1.1.1:443 успешно",
     hint: "check.tcp_443.hint",
-    noDataHint: "Данные TCP-чека ещё не собраны (интервал 30 секунд).",
+    noDataHint: "nodata.tcp_pending",
     staleAfterMs: STALE.s30,
     getValue: s => s.tcpConnect?.latencyMs != null ? `${Math.round(s.tcpConnect.latencyMs)}ms` : null,
     getStatus: s => {
@@ -434,7 +434,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "pkt_loss", layer: 4, name: "check.pkt_loss.name", description: "Потери пакетов < 1% за 15 минут",
     hint: "check.pkt_loss.hint",
-    noDataHint: "Данные статистики пингов ещё не накоплены (нужно ~15 минут).",
+    noDataHint: "nodata.pingstat_pending",
     staleAfterMs: STALE.m15,
     getValue: s => {
       if (!s.pingStats) return null;
@@ -455,7 +455,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "jitter", layer: 4, name: "check.jitter.name", description: "Нестабильность RTT до интернета < 10ms",
     hint: "check.jitter.hint",
-    noDataHint: "Данные jitter ещё не накоплены (нужно ~15 минут).",
+    noDataHint: "nodata.jitter_pending",
     staleAfterMs: STALE.m15,
     getValue: s => {
       const p8 = s.pingStats?.["8.8.8.8"];
@@ -474,9 +474,9 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "no_blackhole", layer: 4, name: "check.no_blackhole.name", description: "В traceroute нет 3+ подряд пропущенных хопов",
     hint: "check.no_blackhole.hint",
-    noDataHint: "Traceroute ещё не выполнен (интервал 10 минут).",
+    noDataHint: "nodata.traceroute_pending",
     staleAfterMs: STALE.m10,
-    getValue: s => s.traceroute ? ((s.traceroute as any).hasBlackHole ? "обнаружен" : "нет") : null,
+    getValue: s => s.traceroute ? ((s.traceroute as any).hasBlackHole ? "ui.value.detected" : "ui.value.none") : null,
     getStatus: s => {
       if (!s.traceroute) return "unknown";
       if (isStale(s.traceroute.timestamp, STALE.m10)) return "stale";
@@ -489,7 +489,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "dns_gw", layer: 5, name: "check.dns_gw.name", description: "DNS сервер роутера возвращает корректный ответ",
     hint: "check.dns_gw.hint",
-    noDataHint: "Нет DNS-сервера роутера в настройках. Добавь IP роутера в DNS_SERVERS.",
+    noDataHint: "nodata.add_gw_dns_server",
     staleAfterMs: STALE.s60,
     getValue: s => {
       const d = s.dns.find(d => !["8.8.8.8","1.1.1.1"].includes(d.server));
@@ -509,7 +509,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "dns_8888", layer: 5, name: "check.dns_8888.name", description: "Google Public DNS отвечает корректно",
     hint: "check.dns_8888.hint",
-    noDataHint: "Данные DNS ещё не собраны (интервал 60 секунд).",
+    noDataHint: "nodata.dns_pending",
     staleAfterMs: STALE.s60,
     getValue: s => { const d = s.dns.find(d => d.server === "8.8.8.8"); return d?.latencyMs != null ? `${Math.round(d.latencyMs)}ms` : null; },
     getStatus: s => {
@@ -523,7 +523,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "dns_1111", layer: 5, name: "check.dns_1111.name", description: "Cloudflare DNS отвечает корректно",
     hint: "check.dns_1111.hint",
-    noDataHint: "Данные DNS ещё не собраны (интервал 60 секунд).",
+    noDataHint: "nodata.dns_pending",
     staleAfterMs: STALE.s60,
     getValue: s => { const d = s.dns.find(d => d.server === "1.1.1.1"); return d?.latencyMs != null ? `${Math.round(d.latencyMs)}ms` : null; },
     getStatus: s => {
@@ -537,7 +537,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "dns_latency", layer: 5, name: "check.dns_latency.name", description: "Задержка DNS запросов < 100ms",
     hint: "check.dns_latency.hint",
-    noDataHint: "Данные DNS ещё не собраны (интервал 60 секунд).",
+    noDataHint: "nodata.dns_pending",
     staleAfterMs: STALE.s60,
     getValue: s => {
       const latencies = s.dns.filter(d => d.latencyMs != null).map(d => d.latencyMs as number);
@@ -561,7 +561,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "dns_consistency", layer: 5, name: "check.dns_consistency.name", description: "Все DNS серверы возвращают одинаковые ответы",
     hint: "check.dns_consistency.hint",
-    noDataHint: "Расширенные DNS-проверки ещё не выполнены (интервал 5 минут).",
+    noDataHint: "nodata.dns_extended_pending",
     staleAfterMs: STALE.m5,
     getValue: s => s.dnsExtra?.consistency ?? null,
     getStatus: s => {
@@ -574,7 +574,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "nxdomain", layer: 5, name: "check.nxdomain.name", description: "DNS возвращает NXDOMAIN для несуществующих доменов",
     hint: "check.nxdomain.hint",
-    noDataHint: "Расширенные DNS-проверки ещё не выполнены (интервал 5 минут).",
+    noDataHint: "nodata.dns_extended_pending",
     staleAfterMs: STALE.m5,
     getValue: s => s.dnsExtra?.nxdomain ?? null,
     getStatus: s => {
@@ -587,7 +587,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "dns_hijack", layer: 5, name: "check.dns_hijack.name", description: "Нет DNS hijacking — ответы не подменяются",
     hint: "check.dns_hijack.hint",
-    noDataHint: "Расширенные DNS-проверки ещё не выполнены (интервал 5 минут).",
+    noDataHint: "nodata.dns_extended_pending",
     staleAfterMs: STALE.m5,
     getValue: s => s.dnsExtra?.hijacking ?? null,
     getStatus: s => {
@@ -600,7 +600,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "doh", layer: 5, name: "check.doh.name", description: "DoH через cloudflare-dns.com работает",
     hint: "check.doh.hint",
-    noDataHint: "Расширенные DNS-проверки ещё не выполнены (интервал 5 минут).",
+    noDataHint: "nodata.dns_extended_pending",
     staleAfterMs: STALE.m5,
     getValue: s => s.dnsExtra?.doh ?? null,
     getStatus: s => {
@@ -615,7 +615,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "http_google", layer: 6, name: "check.http_google.name", description: "HTTPS до google.com — ответ 200, < 2s",
     hint: "check.http_google.hint",
-    noDataHint: "HTTP-чеки ещё не выполнены (интервал 60 секунд).",
+    noDataHint: "nodata.http_pending",
     staleAfterMs: STALE.s60,
     getValue: s => {
       const h = s.http.find(h => h.url.includes("google"));
@@ -633,7 +633,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "http_cf", layer: 6, name: "check.http_cf.name", description: "HTTPS до cloudflare.com — ответ 200",
     hint: "check.http_cf.hint",
-    noDataHint: "HTTP-чеки ещё не выполнены (интервал 60 секунд).",
+    noDataHint: "nodata.http_pending",
     staleAfterMs: STALE.s60,
     getValue: s => { const h = s.http.find(h => h.url.includes("cloudflare")); return h?.statusCode ? String(h.statusCode) : null; },
     getStatus: s => {
@@ -647,7 +647,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "http_github", layer: 6, name: "check.http_github.name", description: "HTTPS до github.com — ответ 200",
     hint: "check.http_github.hint",
-    noDataHint: "HTTP-чеки ещё не выполнены (интервал 60 секунд).",
+    noDataHint: "nodata.http_pending",
     staleAfterMs: STALE.s60,
     getValue: s => { const h = s.http.find(h => h.url.includes("github")); return h?.statusCode ? String(h.statusCode) : null; },
     getStatus: s => {
@@ -661,7 +661,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "http_redirect", layer: 6, name: "check.http_redirect.name", description: "HTTP перенаправляет на HTTPS",
     hint: "check.http_redirect.hint",
-    noDataHint: "HTTP redirect-проверка ещё не выполнена (интервал 60 секунд).",
+    noDataHint: "nodata.http_redirect_pending",
     staleAfterMs: STALE.s60,
     getValue: s => s.httpRedirect?.status ?? null,
     getStatus: s => {
@@ -674,7 +674,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "http_ipv6", layer: 6, name: "check.http_ipv6.name", description: "HTTPS через IPv6 (если доступен)",
     hint: "check.http_ipv6.hint",
-    noDataHint: "IPv6-чек ещё не выполнен (интервал 30 секунд).",
+    noDataHint: "nodata.ipv6_pending",
     staleAfterMs: STALE.s60,
     getValue: s => s.ipv6?.status ?? null,
     getStatus: s => {
@@ -686,7 +686,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "speedtest", layer: 6, name: "check.speedtest.name", description: "Скорость загрузки/выгрузки",
     hint: "check.speedtest.hint",
-    noDataHint: "Speedtest запускается раз в час. Подожди до следующего цикла или перезапусти контейнер.",
+    noDataHint: "nodata.speedtest_pending",
     staleAfterMs: STALE.h1,
     getValue: s => s.speedtest ? `↓${s.speedtest.downloadMbps.toFixed(1)} ↑${s.speedtest.uploadMbps.toFixed(1)} Mbps` : null,
     getStatus: s => {
@@ -699,7 +699,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "captive_portal", layer: 6, name: "check.captive_portal.name", description: "Нет captive portal — сеть открытая",
     hint: "check.captive_portal.hint",
-    noDataHint: "Проверка captive portal ещё не выполнена (интервал 60 секунд).",
+    noDataHint: "nodata.captive_portal_pending",
     staleAfterMs: STALE.s60,
     getValue: s => s.captivePortal?.status ?? null,
     getStatus: s => {
@@ -714,12 +714,12 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "ssl", layer: 7, name: "check.ssl.name", description: "Все SSL сертификаты действительны > 30 дней",
     hint: "check.ssl.hint",
-    noDataHint: "SSL-чеки ещё не выполнены (интервал 24 часа). Или не задан SSL_HOSTS в настройках.",
+    noDataHint: "nodata.ssl_pending",
     staleAfterMs: STALE.h24,
     getValue: s => {
       if (!s.ssl?.length) return null;
       const min = Math.min(...s.ssl.filter(c => c.daysRemaining != null).map(c => c.daysRemaining as number));
-      return isFinite(min) ? `${min}д` : null;
+      return isFinite(min) ? `${min}d` : null;
     },
     getStatus: s => {
       if (!s.ssl?.length) return "unknown";
@@ -734,7 +734,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "tls_ver", layer: 7, name: "check.tls_ver.name", description: "TLS ≥ 1.2 на всех хостах",
     hint: "check.tls_ver.hint",
-    noDataHint: "SSL-чеки ещё не выполнены (интервал 24 часа). Или не задан SSL_HOSTS в настройках.",
+    noDataHint: "nodata.ssl_pending",
     staleAfterMs: STALE.h24,
     getValue: s => s.ssl?.length ? "TLS 1.2+" : null,
     getStatus: s => s.ssl?.length ? "info" : "unknown",
@@ -743,7 +743,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "path_mtu", layer: 7, name: "check.path_mtu.name", description: "Нет фрагментации пакетов до интернета",
     hint: "check.path_mtu.hint",
-    noDataHint: "MTU-чек ещё не выполнен (интервал 15 минут).",
+    noDataHint: "nodata.mtu_check_pending",
     staleAfterMs: STALE.m15,
     getValue: s => {
       if (!s.mtu) return null;
@@ -759,7 +759,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "ipv6_global", layer: 7, name: "check.ipv6_global.name", description: "Глобальное IPv6 подключение работает",
     hint: "check.ipv6_global.hint",
-    noDataHint: "IPv6-чек ещё не выполнен (интервал 30 секунд).",
+    noDataHint: "nodata.ipv6_pending",
     staleAfterMs: STALE.s30,
     getValue: s => s.ipv6?.status ?? null,
     getStatus: s => {
@@ -772,7 +772,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "ntp", layer: 7, name: "check.ntp.name", description: "Системное время синхронизировано — drift < 5s",
     hint: "check.ntp.hint",
-    noDataHint: "NTP-чек ещё не выполнен (интервал 5 минут).",
+    noDataHint: "nodata.ntp_pending",
     staleAfterMs: STALE.m5,
     getValue: s => s.ntp?.driftMs != null ? `${Math.round(s.ntp.driftMs)}ms` : null,
     getStatus: s => {
@@ -785,7 +785,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "ip_stable", layer: 7, name: "check.ip_stable.name", description: "Публичный IP стабилен последние 24 часа",
     hint: "check.ip_stable.hint",
-    noDataHint: "Данные публичного IP ещё не собраны (интервал 5 минут).",
+    noDataHint: "nodata.publicip_stable_pending",
     staleAfterMs: STALE.m5,
     getValue: s => s.publicIp?.ipv4 ?? null,
     getStatus: s => {
@@ -798,9 +798,9 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "route_stable_sec", layer: 7, name: "check.route_stable_sec.name", description: "Маршрут трассировки не менялся",
     hint: "check.route_stable_sec.hint",
-    noDataHint: "Traceroute ещё не выполнен (интервал 10 минут).",
+    noDataHint: "nodata.traceroute_pending",
     staleAfterMs: STALE.m10,
-    getValue: s => s.traceroute ? (s.traceroute.routingChanged ? "изменён" : "стабилен") : null,
+    getValue: s => s.traceroute ? (s.traceroute.routingChanged ? "ui.value.changed" : "ui.value.stable") : null,
     getStatus: s => {
       if (!s.traceroute) return "unknown";
       if (isStale(s.traceroute.timestamp, STALE.m10)) return "stale";
@@ -811,7 +811,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "os_resolver", layer: 7, name: "check.os_resolver.name", description: "/etc/resolv.conf содержит nameserver",
     hint: "check.os_resolver.hint",
-    noDataHint: "Недоступно внутри Docker с bridge-сетью — /etc/resolv.conf контейнера, не хоста.",
+    noDataHint: "nodata.docker_resolver",
     staleAfterMs: STALE.m5,
     getValue: s => s.osResolver?.nameservers?.[0] ?? null,
     getStatus: s => {
@@ -824,7 +824,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "dns_leak", layer: 7, name: "check.dns_leak.name", description: "DNS запросы не утекают через посторонние серверы",
     hint: "check.dns_leak.hint",
-    noDataHint: "Расширенные DNS-проверки ещё не выполнены (интервал 5 минут).",
+    noDataHint: "nodata.dns_extended_pending",
     staleAfterMs: STALE.m5,
     getValue: s => s.dnsExtra?.dnsLeak ?? null,
     getStatus: s => {
@@ -837,7 +837,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "iface_anomaly", layer: 7, name: "check.iface_anomaly.name", description: "Нет резкого роста ошибок/дропов",
     hint: "check.iface_anomaly.hint",
-    noDataHint: "Недоступно внутри Docker с bridge-сетью. Работает при network_mode: host на Linux.",
+    noDataHint: "nodata.docker_bridge",
     staleAfterMs: STALE.s30,
     getValue: s => s.interface ? `${s.interface.rxErrors + s.interface.txErrors + s.interface.rxDropped + s.interface.txDropped}` : null,
     getStatus: s => {

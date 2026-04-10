@@ -400,6 +400,42 @@ const ru = {
   'diag.R12.step.0':  'Свяжись с провайдером',
   'diag.R12.step.1':  'Проверь качество линии',
   'diag.R12.step.2':  'Запроси диагностику у провайдера',
+
+  // ── getValue translatable values ─────────────────────────
+  'ui.value.stable':   'стабилен',
+  'ui.value.changed':  'изменён',
+  'ui.value.detected': 'обнаружен',
+  'ui.value.none':     'нет',
+  'ui.days_abbr':      'д',
+
+  // ── noData messages ───────────────────────────────────────
+  'nodata.docker_bridge':          'Недоступно внутри Docker с bridge-сетью. Работает при network_mode: host на Linux.',
+  'nodata.docker_resolver':        'Недоступно внутри Docker с bridge-сетью — /etc/resolv.conf контейнера, не хоста.',
+  'nodata.gw_ping_target':         "Чек настроен на цель с меткой 'Router'. Добавь роутер в PING_TARGETS с меткой содержащей 'router'.",
+  'nodata.no_gw_pings':            "Нет данных о пингах до роутера — см. подсказку для 'Ping шлюза'.",
+  'nodata.add_gw_dns':             'Нет DNS-сервера кроме 8.8.8.8/1.1.1.1 в настройках. Добавь IP роутера в DNS_SERVERS.',
+  'nodata.mtu_pending':            'Данные MTU ещё не собраны (интервал 15 минут).',
+  'nodata.traceroute_pending':     'Traceroute ещё не выполнен (интервал 10 минут).',
+  'nodata.traceroute_pending_isp': 'Traceroute ещё не выполнен (интервал 10 минут) или все хопы скрыты провайдером.',
+  'nodata.traceroute_isp_hidden':  'Данные traceroute недоступны или провайдер скрывает первый хоп (**).',
+  'nodata.cgnat_pending':          'Данные CGNAT ещё не собраны (интервал 1 час).',
+  'nodata.publicip_pending':       'Запрос публичного IP ещё не выполнен (интервал 5 минут).',
+  'nodata.ping_pending':           'Данные пинга ещё не собраны (интервал 30 секунд).',
+  'nodata.tcp_pending':            'Данные TCP-чека ещё не собраны (интервал 30 секунд).',
+  'nodata.pingstat_pending':       'Данные статистики пингов ещё не накоплены (нужно ~15 минут).',
+  'nodata.jitter_pending':         'Данные jitter ещё не накоплены (нужно ~15 минут).',
+  'nodata.add_gw_dns_server':      'Нет DNS-сервера роутера в настройках. Добавь IP роутера в DNS_SERVERS.',
+  'nodata.dns_pending':            'Данные DNS ещё не собраны (интервал 60 секунд).',
+  'nodata.dns_extended_pending':   'Расширенные DNS-проверки ещё не выполнены (интервал 5 минут).',
+  'nodata.http_pending':           'HTTP-чеки ещё не выполнены (интервал 60 секунд).',
+  'nodata.http_redirect_pending':  'HTTP redirect-проверка ещё не выполнена (интервал 60 секунд).',
+  'nodata.ipv6_pending':           'IPv6-чек ещё не выполнен (интервал 30 секунд).',
+  'nodata.speedtest_pending':      'Speedtest запускается раз в час. Подожди до следующего цикла или перезапусти контейнер.',
+  'nodata.captive_portal_pending': 'Проверка captive portal ещё не выполнена (интервал 60 секунд).',
+  'nodata.ssl_pending':            'SSL-чеки ещё не выполнены (интервал 24 часа). Или не задан SSL_HOSTS в настройках.',
+  'nodata.mtu_check_pending':      'MTU-чек ещё не выполнен (интервал 15 минут).',
+  'nodata.ntp_pending':            'NTP-чек ещё не выполнен (интервал 5 минут).',
+  'nodata.publicip_stable_pending':'Данные публичного IP ещё не собраны (интервал 5 минут).',
 } as const;
 
 export type TranslationKey = keyof typeof ru;
