@@ -96,33 +96,53 @@ export async function checkIpv6() {
 }
 
 // ─── DHCP lease ────────────────────────────────────────────────────────────────
+
+export function parseDhcpMacOs(out: string): { status: string; value: Record<string, unknown> } {
+  if (!out.trim()) return { status: "unknown", value: {} };
+  // Check for ACK (DHCP success)
+  const isDhcp = /dhcp_message_type.*ACK/i.test(out);
+  const isPppoe = /pppoe/i.test(out);
+  if (isPppoe) return { status: "pppoe_up", value: { connectionType: "pppoe" } };
+  if (isDhcp) return { status: "ok", value: { connectionType: "dhcp" } };
+  return { status: "unknown", value: {} };
+}
+
 export async function checkDhcp() {
   const ts = now();
 
-  // Try to read DHCP lease expiry from systemd-networkd or dhclient
   let status = "unknown";
   let value: Record<string, unknown> = {};
 
   try {
-    const result = await spawn(["ip", "link", "show"], 3000);
-    // Check if ppp0 exists (PPPoE)
-    if (result.stdout.includes("ppp0")) {
-      const pppResult = await spawn(["ip", "link", "show", "ppp0"], 3000);
-      const up = pppResult.stdout.includes("UP");
-      status = up ? "pppoe_up" : "pppoe_down";
-      value = { interface: "ppp0", up };
+    if (process.platform === "darwin") {
+      // Find primary interface from route table
+      const routeOut = await spawn(["netstat", "-rn"], 3000);
+      const ifMatch = routeOut.stdout.match(/^default\s+\S+\s+\S+\s+(\S+)/m);
+      const iface = ifMatch?.[1] ?? "en0";
+      const pktOut = await spawn(["ipconfig", "getpacket", iface], 3000).catch(() => ({ stdout: "" }));
+      ({ status, value } = parseDhcpMacOs(pktOut.stdout));
     } else {
-      // Try reading dhclient lease file
-      const leaseFile = await Bun.file("/var/lib/dhcp/dhclient.leases").text().catch(() => null);
-      if (leaseFile) {
-        const expiryMatch = leaseFile.match(/expire \d+ ([\d\/: ]+);/g);
-        if (expiryMatch && expiryMatch.length > 0) {
-          const lastExpiry = expiryMatch[expiryMatch.length - 1];
-          status = "ok";
-          value = { leaseExpiry: lastExpiry ?? null };
-        }
+      // Linux path
+      const result = await spawn(["ip", "link", "show"], 3000);
+      // Check if ppp0 exists (PPPoE)
+      if (result.stdout.includes("ppp0")) {
+        const pppResult = await spawn(["ip", "link", "show", "ppp0"], 3000);
+        const up = pppResult.stdout.includes("UP");
+        status = up ? "pppoe_up" : "pppoe_down";
+        value = { interface: "ppp0", up };
       } else {
-        status = "ok"; // Can't read lease but interface is up
+        // Try reading dhclient lease file
+        const leaseFile = await Bun.file("/var/lib/dhcp/dhclient.leases").text().catch(() => null);
+        if (leaseFile) {
+          const expiryMatch = leaseFile.match(/expire \d+ ([\d\/: ]+);/g);
+          if (expiryMatch && expiryMatch.length > 0) {
+            const lastExpiry = expiryMatch[expiryMatch.length - 1];
+            status = "ok";
+            value = { leaseExpiry: lastExpiry ?? null };
+          }
+        } else {
+          status = "ok"; // Can't read lease but interface is up
+        }
       }
     }
   } catch {
@@ -140,8 +160,43 @@ export async function checkDhcp() {
 }
 
 // ─── Network interface stats ─────────────────────────────────────────────────
+
+export function parseNetstatInterfaceStats(
+  ifname: string,
+  out: string
+): { interface: string; rxBytes: number; txBytes: number; rxErrors: number; txErrors: number; rxDropped: number; txDropped: number } | null {
+  const line = out.split("\n").find(l => l.trim().startsWith(ifname) && l.includes("<Link#"));
+  if (!line) return null;
+  const parts = line.trim().split(/\s+/);
+  // Columns: 0=Name 1=Mtu 2=Network 3=Address 4=Ipkts 5=Ierrs 6=Ibytes 7=Opkts 8=Oerrs 9=Obytes
+  return {
+    interface: ifname,
+    rxBytes: parseInt(parts[6] ?? "0"),
+    txBytes: parseInt(parts[9] ?? "0"),
+    rxErrors: parseInt(parts[5] ?? "0"),
+    txErrors: parseInt(parts[8] ?? "0"),
+    rxDropped: 0,
+    txDropped: 0,
+  };
+}
+
 export async function checkNetworkStats() {
   const ts = now();
+
+  if (process.platform === "darwin") {
+    // Find primary interface
+    const routeOut = await spawn(["netstat", "-rn"], 3000).catch(() => ({ stdout: "" }));
+    const ifMatch = routeOut.stdout.match(/^default\s+\S+\s+\S+\s+(\S+)/m);
+    const iface = ifMatch?.[1] ?? "en0";
+
+    const statsOut = await spawn(["netstat", "-I", iface, "-b"], 3000).catch(() => ({ stdout: "" }));
+    const row = parseNetstatInterfaceStats(iface, statsOut.stdout);
+    if (!row) return [];
+
+    const result = { ...row, timestamp: ts };
+    await db.insert(networkStats).values(result);
+    return [result];
+  }
 
   // Read /proc/net/dev (Linux only)
   const content = await Bun.file("/proc/net/dev").text().catch(() => null);
