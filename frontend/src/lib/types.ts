@@ -148,10 +148,6 @@ export interface PingStatsEntry {
   avgRttMs: number | null;
 }
 
-export interface PingStatsCheck {
-  targets: Record<string, PingStatsEntry>;
-}
-
 export type CheckStatus = 'ok' | 'fail' | 'warn' | 'stale' | 'unknown' | 'info';
 
 export interface CheckDefinition {
@@ -200,7 +196,7 @@ export interface StatusResponse {
   httpRedirect: HttpRedirectCheck | null;
   ntp: NtpCheck | null;
   osResolver: OsResolverCheck | null;
-  pingStats: PingStatsCheck | null;
+  pingStats: Record<string, PingStatsEntry> | null;
 }
 
 export interface PingStats {

@@ -1,4 +1,4 @@
-import type { StatusResponse, DiagnosticRule } from "./types.ts";
+import type { StatusResponse, DiagnosticRule, PingStatsEntry } from "./types.ts";
 
 function gwOk(s: StatusResponse): boolean {
   const gw = s.ping.find(p => p.targetLabel?.toLowerCase().includes("router") || (!["8.8.8.8","1.1.1.1","9.9.9.9"].includes(p.target)));
@@ -82,7 +82,7 @@ const RULES: DiagnosticRule[] = [
     steps: ["Проверь кабель провайдера", "Свяжись с провайдером", "Проверь качество WiFi сигнала", "Смотри: mtr 8.8.8.8"],
     condition: s => {
       if (!s.pingStats) return false;
-      const maxLoss = Math.max(...Object.values(s.pingStats.targets).map(t => t.lossPercent));
+      const maxLoss = Math.max(...Object.values(s.pingStats).map((t: PingStatsEntry) => t.lossPercent));
       return maxLoss > 5;
     },
   },

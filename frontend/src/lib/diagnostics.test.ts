@@ -27,7 +27,7 @@ function baseStatus(): StatusResponse {
     httpRedirect: { status: "ok", timestamp: Date.now() },
     ntp: { status: "ok", driftMs: 30, timestamp: Date.now() },
     osResolver: { status: "ok", nameservers: ["192.168.1.1"], timestamp: Date.now() },
-    pingStats: { targets: { "8.8.8.8": { lossPercent: 0, jitterMs: 1.2, avgRttMs: 20 }, "1.1.1.1": { lossPercent: 0, jitterMs: 1.0, avgRttMs: 18 } } },
+    pingStats: { "8.8.8.8": { lossPercent: 0, jitterMs: 1.2, avgRttMs: 20 }, "1.1.1.1": { lossPercent: 0, jitterMs: 1.0, avgRttMs: 18 } },
   };
 }
 
@@ -57,11 +57,11 @@ describe("R3: ISP outage (no_internet)", () => {
 
 describe("R7: packet_loss", () => {
   test("fires when loss > 5%", () => {
-    const s = { ...baseStatus(), pingStats: { targets: { "8.8.8.8": { lossPercent: 8.5, jitterMs: 5, avgRttMs: 25 } } } };
+    const s = { ...baseStatus(), pingStats: { "8.8.8.8": { lossPercent: 8.5, jitterMs: 5, avgRttMs: 25 } } };
     expect(evaluate(s).find(r => r.id === "R7")).toBeDefined();
   });
   test("does not fire when loss < 5%", () => {
-    const s = { ...baseStatus(), pingStats: { targets: { "8.8.8.8": { lossPercent: 2, jitterMs: 1, avgRttMs: 20 } } } };
+    const s = { ...baseStatus(), pingStats: { "8.8.8.8": { lossPercent: 2, jitterMs: 1, avgRttMs: 20 } } };
     expect(evaluate(s).find(r => r.id === "R7")).toBeUndefined();
   });
 });

@@ -151,19 +151,19 @@ export const CHECKS: CheckDefinition[] = [
     staleAfterMs: STALE.m15,
     getValue: s => {
       const gwTarget = gwPing(s)?.target;
-      const stats = gwTarget ? s.pingStats?.targets[gwTarget] : null;
+      const stats = gwTarget ? s.pingStats?.[gwTarget] : null;
       return stats ? `${stats.lossPercent.toFixed(1)}%` : null;
     },
     getStatus: s => {
       const gwTarget = gwPing(s)?.target;
       if (!gwTarget || !s.pingStats) return "unknown";
-      const stats = s.pingStats.targets[gwTarget];
+      const stats = s.pingStats[gwTarget];
       if (!stats) return "unknown";
       return stats.lossPercent < 1 ? "ok" : stats.lossPercent < 5 ? "warn" : "fail";
     },
     getFix: s => {
       const gwTarget = gwPing(s)?.target;
-      const stats = gwTarget ? s.pingStats?.targets[gwTarget] : null;
+      const stats = gwTarget ? s.pingStats?.[gwTarget] : null;
       return stats && stats.lossPercent >= 1 ? ["Нестабильная локальная сеть", "Проверь кабель/WiFi сигнал", "Проверь не перегружен ли роутер"] : null;
     },
   },
@@ -206,19 +206,19 @@ export const CHECKS: CheckDefinition[] = [
     staleAfterMs: STALE.m15,
     getValue: s => {
       const gwTarget = gwPing(s)?.target;
-      const stats = gwTarget ? s.pingStats?.targets[gwTarget] : null;
+      const stats = gwTarget ? s.pingStats?.[gwTarget] : null;
       return stats?.jitterMs != null ? `${stats.jitterMs.toFixed(1)}ms` : null;
     },
     getStatus: s => {
       const gwTarget = gwPing(s)?.target;
       if (!gwTarget || !s.pingStats) return "unknown";
-      const stats = s.pingStats.targets[gwTarget];
+      const stats = s.pingStats[gwTarget];
       if (!stats || stats.jitterMs == null) return "unknown";
       return stats.jitterMs < 5 ? "ok" : stats.jitterMs < 15 ? "warn" : "fail";
     },
     getFix: s => {
       const gwTarget = gwPing(s)?.target;
-      const stats = gwTarget ? s.pingStats?.targets[gwTarget] : null;
+      const stats = gwTarget ? s.pingStats?.[gwTarget] : null;
       return stats?.jitterMs != null && stats.jitterMs >= 5 ? ["Нестабильный WiFi или кабель", "Попробуй другой порт на роутере", "Уменьши нагрузку на сеть"] : null;
     },
   },
@@ -386,17 +386,17 @@ export const CHECKS: CheckDefinition[] = [
     staleAfterMs: STALE.m15,
     getValue: s => {
       if (!s.pingStats) return null;
-      const max = Math.max(...Object.values(s.pingStats.targets).map(t => t.lossPercent));
+      const max = Math.max(...Object.values(s.pingStats).map(t => t.lossPercent));
       return `${max.toFixed(1)}%`;
     },
     getStatus: s => {
       if (!s.pingStats) return "unknown";
-      const max = Math.max(...Object.values(s.pingStats.targets).map(t => t.lossPercent));
+      const max = Math.max(...Object.values(s.pingStats).map(t => t.lossPercent));
       return max < 1 ? "ok" : max < 5 ? "warn" : "fail";
     },
     getFix: s => {
       if (!s.pingStats) return null;
-      const max = Math.max(...Object.values(s.pingStats.targets).map(t => t.lossPercent));
+      const max = Math.max(...Object.values(s.pingStats).map(t => t.lossPercent));
       return max >= 1 ? ["Нестабильное соединение", "Проверь кабель провайдера", "Свяжись с провайдером"] : null;
     },
   },
@@ -404,16 +404,16 @@ export const CHECKS: CheckDefinition[] = [
     id: "jitter", layer: 4, name: "Jitter (нестабильность)", description: "Нестабильность RTT до интернета < 10ms",
     staleAfterMs: STALE.m15,
     getValue: s => {
-      const p8 = s.pingStats?.targets["8.8.8.8"];
+      const p8 = s.pingStats?.["8.8.8.8"];
       return p8?.jitterMs != null ? `${p8.jitterMs.toFixed(1)}ms` : null;
     },
     getStatus: s => {
-      const p8 = s.pingStats?.targets["8.8.8.8"];
+      const p8 = s.pingStats?.["8.8.8.8"];
       if (!p8 || p8.jitterMs == null) return "unknown";
       return p8.jitterMs < 10 ? "ok" : p8.jitterMs < 30 ? "warn" : "fail";
     },
     getFix: s => {
-      const p8 = s.pingStats?.targets["8.8.8.8"];
+      const p8 = s.pingStats?.["8.8.8.8"];
       return p8?.jitterMs != null && p8.jitterMs >= 10 ? ["Нестабильный интернет", "Проверь качество линии провайдера", "Смотри: mtr 8.8.8.8"] : null;
     },
   },
