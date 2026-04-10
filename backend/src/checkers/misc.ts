@@ -165,7 +165,10 @@ export function parseNetstatInterfaceStats(
   ifname: string,
   out: string
 ): { interface: string; rxBytes: number; txBytes: number; rxErrors: number; txErrors: number; rxDropped: number; txDropped: number } | null {
-  const line = out.split("\n").find(l => l.trim().startsWith(ifname) && l.includes("<Link#"));
+  const line = out.split("\n").find(l => {
+    const trimmed = l.trim();
+    return (trimmed.startsWith(ifname + " ") || trimmed.startsWith(ifname + "\t")) && l.includes("<Link#");
+  });
   if (!line) return null;
   const parts = line.trim().split(/\s+/);
   // Columns: 0=Name 1=Mtu 2=Network 3=Address 4=Ipkts 5=Ierrs 6=Ibytes 7=Opkts 8=Oerrs 9=Obytes

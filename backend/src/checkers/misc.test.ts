@@ -44,6 +44,16 @@ end (none): `;
   test("returns unknown for empty output", () => {
     expect(parseDhcpMacOs("").status).toBe("unknown");
   });
+
+  test("detects PPPoE connection", () => {
+    const out = `op = BOOTREPLY
+htype = 1
+options:dhcp_message_type (uint8): DISCOVER 0x1
+pppoe_session_id: 0x1234`;
+    const result = parseDhcpMacOs(out);
+    expect(result.status).toBe("pppoe_up");
+    expect(result.value).toMatchObject({ connectionType: "pppoe" });
+  });
 });
 
 describe("parseNetstatInterfaceStats", () => {
