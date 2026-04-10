@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { CheckDefinition, StatusResponse, CheckStatus } from '../lib/types.ts';
   import CheckRow from './CheckRow.svelte';
+  import { t } from '../lib/i18n/index.ts';
 
   interface Props {
     layer: { id: number; name: string; icon: string };
@@ -23,7 +24,9 @@
   );
 
   const badgeText = $derived(
-    failCount > 0 ? `${failCount} errors` : `${okCount}/${checks.length} ✓`
+    failCount > 0
+      ? $t('ui.badge_errors', { n: failCount })
+      : $t('ui.badge_ok', { ok: okCount, total: checks.length })
   );
   const badgeColor = $derived(failCount > 0 ? '#ef4444' : '#22c55e');
 </script>
@@ -43,13 +46,13 @@
       font-size: 11px; color: #64748b;
       margin-bottom: 8px; padding: 4px 8px;
       background: rgba(100,116,139,0.1); border-radius: 4px;
-    ">⚠ Likely cascading from an upstream layer issue</div>
+    ">⚠ {$t('ui.cascade_warning')}</div>
   {/if}
 
   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
     <div style="display: flex; align-items: center; gap: 6px;">
       <span style="font-size: 16px;">{layer.icon}</span>
-      <span style="font-weight: 600; font-size: 14px; color: #e2e8f0;">{layer.name}</span>
+      <span style="font-weight: 600; font-size: 14px; color: #e2e8f0;">{$t(layer.name)}</span>
     </div>
     <span style="
       font-size: 11px; font-weight: 600; color: {badgeColor};
