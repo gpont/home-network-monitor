@@ -24,10 +24,44 @@ with 53 checks, automatic problem diagnosis, and fix instructions.
 
 ## Quick Start
 
+### Option 1 — docker run
+
 ```bash
-git clone https://github.com/gpont/home-network-monitor
-cd home-network-monitor
-cp .env.example .env
+docker run -d \
+  --name home-network-monitor \
+  --cap-add NET_RAW \
+  --cap-add NET_ADMIN \
+  --network host \
+  -v $(pwd)/data:/app/data \
+  -e PORT=3201 \
+  ghcr.io/gpont/home-network-monitor:latest
+```
+
+Open `http://your-server-ip:3201`
+
+### Option 2 — docker-compose
+
+Create a `docker-compose.yml`:
+
+```yaml
+services:
+  monitor:
+    image: ghcr.io/gpont/home-network-monitor:latest
+    container_name: home-network-monitor
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    network_mode: host
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PORT=3201
+    restart: unless-stopped
+```
+
+Then:
+
+```bash
 docker-compose up -d
 ```
 
@@ -48,10 +82,12 @@ Data is stored in `./data/` on the host — history is preserved across containe
 
 ```
 ghcr.io/gpont/home-network-monitor:latest
+ghcr.io/gpont/home-network-monitor:1.0.0
 ```
 
-The container requires `network_mode: host` and `cap_add: NET_RAW` (for ICMP ping).
-Both are pre-configured in `docker-compose.yml`.
+The container requires `--cap-add NET_RAW` (ICMP ping) and `--network host` (gateway/traceroute detection on Linux).
+
+> **macOS / Docker Desktop:** `network_mode: host` doesn't work — use bridge networking with `-p 3201:3201` instead. Gateway and traceroute checks will be limited.
 
 ## Development
 
