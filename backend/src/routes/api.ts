@@ -172,7 +172,7 @@ export function buildApiRoutes(db: BunSQLiteDatabase<any>) {
       ping: latestPerKey(latestPings, (r) => r.target),
       dns: latestPerKey(latestDns, (r) => r.server),
       http: latestPerKey(latestHttp, (r) => r.url),
-      traceroute: latestTraceroute[0] ?? null,
+      traceroute: latestTraceroute[0] ? { ...latestTraceroute[0], hops: JSON.parse(latestTraceroute[0].hops) } : null,
       speedtest: latestSpeedtest[0] ?? null,
       publicIp: latestIp[0] ?? null,
       cgnat: latestCgnat[0] ?? null,
