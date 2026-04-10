@@ -41,8 +41,8 @@
 ## T11-T12 — Scheduler + API (последовательно)
 > После: T05-T10 · Блокирует: T13
 
-- [ ] **T11** — Подключить все чекеры в scheduler.ts · [plans/11-scheduler-api.md](plans/11-scheduler-api.md#t11)
-- [ ] **T12** — Расширить /api/status (53 чека) · [plans/11-scheduler-api.md](plans/11-scheduler-api.md#t12)
+- [x] **T11** — Подключить все чекеры в scheduler.ts · [plans/11-scheduler-api.md](plans/11-scheduler-api.md#t11) — checkInterface/System/TcpConnect/DnsExtras/CaptivePortal/HttpRedirect подключены
+- [x] **T12** — Расширить /api/status (53 чека) · [plans/11-scheduler-api.md](plans/11-scheduler-api.md#t12) — buildApiRoutes(db), новые поля: interface/tcpConnect/dnsExtra/captivePortal/ntp/osResolver/pingStats
 
 ---
 
