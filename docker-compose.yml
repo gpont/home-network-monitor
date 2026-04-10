@@ -15,6 +15,10 @@ services:
       # - SSL_HOSTS=google.com,cloudflare.com,github.com
       # Optional: iperf3 server address
       # - IPERF3_SERVER=your-server-ip
+    # Create a .env file next to docker-compose.yml to customize settings (see .env.example)
+    env_file:
+      - path: .env
+        required: false
     cap_add:
       - NET_RAW       # Required for ICMP ping
       - NET_ADMIN     # Required for some network operations
