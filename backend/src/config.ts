@@ -21,30 +21,55 @@ export interface Config {
   };
 }
 
+function parseTargets(env: string | undefined, defaults: Array<{ host: string; label: string }>) {
+  if (!env) return defaults;
+  return env.split(",").map(s => {
+    const parts = s.trim().split(":");
+    const host = parts[0] ?? s.trim();
+    const label = parts.slice(1).join(":").trim() || host;
+    return { host, label };
+  });
+}
+
+function parseDnsServers(env: string | undefined, defaults: Array<{ ip: string; label: string }>) {
+  if (!env) return defaults;
+  return env.split(",").map(s => {
+    const parts = s.trim().split(":");
+    const ip = parts[0] ?? s.trim();
+    const label = parts.slice(1).join(":").trim() || ip;
+    return { ip, label };
+  });
+}
+
+function parseHttpTargets(env: string | undefined, defaults: string[]) {
+  if (!env) return defaults;
+  return env.split(",").map(s => s.trim()).filter(Boolean);
+}
+
 export function loadConfig(): Config {
   return {
     port: parseInt(process.env["PORT"] ?? "3000"),
     dbPath: process.env["DB_PATH"] ?? "/app/data/monitor.db",
 
-    pingTargets: [
-      { host: "GATEWAY_PLACEHOLDER", label: "Router (auto)" }, // replaced at runtime
-      { host: "ISP_HOP_PLACEHOLDER", label: "ISP First Hop" }, // replaced at runtime
+    pingTargets: parseTargets(process.env["PING_TARGETS"], [
+      { host: "GATEWAY_PLACEHOLDER", label: "Router (auto)" },
+      { host: "ISP_HOP_PLACEHOLDER", label: "ISP First Hop" },
       { host: "8.8.8.8", label: "Google DNS" },
       { host: "1.1.1.1", label: "Cloudflare" },
       { host: "9.9.9.9", label: "Quad9" },
-    ],
+    ]),
 
-    dnsServers: [
-      { ip: "GATEWAY_PLACEHOLDER", label: "Router DNS" }, // replaced at runtime
+    dnsServers: parseDnsServers(process.env["DNS_SERVERS"], [
+      { ip: "GATEWAY_PLACEHOLDER", label: "Router DNS" },
       { ip: "8.8.8.8", label: "Google 8.8.8.8" },
       { ip: "1.1.1.1", label: "Cloudflare 1.1.1.1" },
-    ],
+    ]),
 
-    httpTargets: [
+    httpTargets: parseHttpTargets(process.env["HTTP_TARGETS"], [
       "https://www.google.com",
       "https://www.cloudflare.com",
       "https://github.com",
-    ],
+    ]),
 
     sslHosts: (process.env["SSL_HOSTS"] ?? "google.com,cloudflare.com,github.com")
       .split(",")
