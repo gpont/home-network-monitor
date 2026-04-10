@@ -13,6 +13,8 @@ import {
   checkNetworkStats,
   checkSslCert,
 } from "./checkers/misc.ts";
+import { scheduleCleanup } from "./db/cleanup.ts";
+import { db } from "./db/client.ts";
 
 type BroadcastFn = (event: string, data: unknown) => void;
 
@@ -21,6 +23,8 @@ let ispHopIp: string | null = null;
 
 export async function startScheduler(config: Config, broadcast: BroadcastFn) {
   console.log("[scheduler] Starting...");
+
+  scheduleCleanup(db);
 
   await loadLastIp();
 
