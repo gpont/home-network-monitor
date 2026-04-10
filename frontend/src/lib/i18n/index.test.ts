@@ -10,7 +10,7 @@ const mockStore: Record<string, string> = {};
 
 import { describe, test, expect, beforeEach } from 'bun:test';
 import { get } from 'svelte/store';
-import { locale, t, detectLocale } from './index.ts';
+import { locale, t, detectLocale } from './index';
 
 describe('detectLocale', () => {
   beforeEach(() => {
