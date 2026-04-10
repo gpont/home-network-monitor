@@ -1,5 +1,5 @@
 import { db } from "../db/client.ts";
-import { httpResults } from "../db/schema.ts";
+import { httpResults, captivePortalChecks, httpRedirectChecks } from "../db/schema.ts";
 import { now } from "./utils.ts";
 
 export interface HttpResult {
@@ -62,4 +62,47 @@ export async function runHttpChecks(urls: string[]): Promise<HttpResult[]> {
   );
 
   return results;
+}
+
+export function parseCaptivePortalResponse(status: number, body: string): "clean" | "detected" {
+  return status === 200 && body.trim() === "success" ? "clean" : "detected";
+}
+
+export function parseRedirectResponse(status: number, location: string | null): "ok" | "intercepted" {
+  return (status === 301 || status === 302) && location?.startsWith("https://") ? "ok" : "intercepted";
+}
+
+export async function checkCaptivePortal(): Promise<{ status: "clean" | "detected" | "error" }> {
+  const timestamp = Date.now();
+  try {
+    // Use Apple's captive portal detection URL
+    const res = await fetch("http://captive.apple.com/hotspot-detect.html", {
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
+    });
+    const body = await res.text();
+    const status = parseCaptivePortalResponse(res.status, body);
+    await db.insert(captivePortalChecks).values({ status, timestamp });
+    return { status };
+  } catch {
+    await db.insert(captivePortalChecks).values({ status: "error", timestamp });
+    return { status: "error" };
+  }
+}
+
+export async function checkHttpRedirect(): Promise<{ status: "ok" | "intercepted" | "error" }> {
+  const timestamp = Date.now();
+  try {
+    const res = await fetch("http://www.google.com", {
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
+    });
+    const location = res.headers.get("location");
+    const status = parseRedirectResponse(res.status, location);
+    await db.insert(httpRedirectChecks).values({ status, timestamp });
+    return { status };
+  } catch {
+    await db.insert(httpRedirectChecks).values({ status: "error", timestamp });
+    return { status: "error" };
+  }
 }
