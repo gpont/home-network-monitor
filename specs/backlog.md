@@ -74,5 +74,5 @@
 ## T23-T24 — CI/CD + Release
 > T23 после T21 · T24 после T20 + T22 + T23
 
-- [ ] **T23** — GitHub Actions CI/CD · [plans/23-cicd-release.md](plans/23-cicd-release.md#t23)
-- [ ] **T24** — Интеграционный тест + первый релиз · [plans/23-cicd-release.md](plans/23-cicd-release.md#t24)
+- [x] **T23** — GitHub Actions CI/CD · [plans/23-cicd-release.md](plans/23-cicd-release.md#t23) — .github/workflows/docker.yml, push to main → :latest, tag v* → :vX.Y.Z
+- [x] **T24** — Интеграционный тест + первый релиз · [plans/23-cicd-release.md](plans/23-cicd-release.md#t24) — 56 тестов зелёных, Docker работает, дашборд подтверждён
