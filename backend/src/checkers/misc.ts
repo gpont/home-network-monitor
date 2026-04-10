@@ -180,6 +180,20 @@ export async function checkNetworkStats() {
   return results;
 }
 
+// ─── Black hole detection ──────────────────────────────────────────────────
+export function detectBlackHole(hops: Array<{ hop: number; ip: string | null; rttMs: number | null }>): boolean {
+  let consecutive = 0;
+  for (const hop of hops) {
+    if (hop.ip === null) {
+      consecutive++;
+      if (consecutive >= 3) return true;
+    } else {
+      consecutive = 0;
+    }
+  }
+  return false;
+}
+
 // ─── SSL certificate check ─────────────────────────────────────────────────
 export async function checkSslCert(host: string) {
   const ts = now();
@@ -195,7 +209,7 @@ export async function checkSslCert(host: string) {
     if (tls?.validTo) {
       const expiresAt = new Date(tls.validTo).getTime();
       const daysRemaining = Math.floor((expiresAt - ts) / 86400000);
-      const status = daysRemaining < 0 ? "expired" : daysRemaining < 14 ? "warning" : "ok";
+      const status = daysRemaining < 0 ? "expired" : daysRemaining < 30 ? "warning" : "ok";
 
       await db.insert(sslChecks).values({
         host,
@@ -218,7 +232,7 @@ export async function checkSslCert(host: string) {
     if (notAfterMatch?.[1]) {
       const expiresAt = new Date(notAfterMatch[1]).getTime();
       const daysRemaining = Math.floor((expiresAt - ts) / 86400000);
-      const status = daysRemaining < 0 ? "expired" : daysRemaining < 14 ? "warning" : "ok";
+      const status = daysRemaining < 0 ? "expired" : daysRemaining < 30 ? "warning" : "ok";
 
       await db.insert(sslChecks).values({
         host,

@@ -2,6 +2,7 @@ import { db } from "../db/client.ts";
 import { tracerouteResults } from "../db/schema.ts";
 import { spawn, now } from "./utils.ts";
 import { eq, desc } from "drizzle-orm";
+import { detectBlackHole } from "./misc.ts";
 
 export interface Hop {
   hop: number;
@@ -74,6 +75,7 @@ export async function runTraceroute(target = "8.8.8.8"): Promise<TracerouteResul
     target,
     hops: JSON.stringify(hops),
     routingChanged,
+    hasBlackHole: detectBlackHole(hops),
     timestamp: ts,
   });
 
