@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { t } from '../lib/i18n/index.ts';
+
   interface LayerStatus {
     id: number;
     icon: string;
@@ -43,7 +45,7 @@
       "
     >
       <span style="font-size: 15px;">{layer.icon}</span>
-      <span>{layer.name}</span>
+      <span>{$t(layer.name)}</span>
       {#if layer.failCount > 0}
         <span style="
           position: absolute; top: -6px; right: -6px;
