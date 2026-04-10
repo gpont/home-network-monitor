@@ -1,11 +1,18 @@
-# home-network-monitor
+# 📡 home-network-monitor
 
 Network diagnostic dashboard for your home server.
 Shows the full packet path (Device → Router → ISP → Internet → DNS → HTTP → Security)
 with 53 checks, automatic problem diagnosis, and fix instructions.
 
-<!-- Screenshot placeholder -->
-<!-- ![Dashboard screenshot](docs/screenshot.png) -->
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Build](https://github.com/gpont/home-network-monitor/actions/workflows/docker.yml/badge.svg)](https://github.com/gpont/home-network-monitor/actions/workflows/docker.yml)
+[![Docker](https://img.shields.io/badge/Docker-ghcr.io-blue?logo=docker)](https://github.com/gpont/home-network-monitor/pkgs/container/home-network-monitor)
+[![self-hosted](https://img.shields.io/badge/self--hosted-%E2%9C%93-brightgreen)]()
+[![no cloud](https://img.shields.io/badge/no_cloud-%E2%9C%93-brightgreen)]()
+[![built with Bun](https://img.shields.io/badge/built_with-Bun-fbf0df?logo=bun)]()
+[![Svelte 5](https://img.shields.io/badge/Svelte-5-ff3e00?logo=svelte&logoColor=white)]()
+
+![Dashboard screenshot](docs/screenshot.png)
 
 ## Features
 
