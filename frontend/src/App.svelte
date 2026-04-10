@@ -66,6 +66,13 @@
 
   <div class="path-section">
     <PathChain layers={layerStatuses} onNodeClick={scrollToLayer} />
+    <div class="legend">
+      <span class="legend-item"><span class="dot ok"></span>OK — проверка пройдена</span>
+      <span class="legend-item"><span class="dot fail"></span>Ошибка — требует внимания</span>
+      <span class="legend-item"><span class="dot warn"></span>Предупреждение</span>
+      <span class="legend-item"><span class="dot info"></span>Информация (без критериев)</span>
+      <span class="legend-item"><span class="dot nodata"></span>Нет данных</span>
+    </div>
   </div>
 
   {#if activeRules.length > 0}
@@ -191,6 +198,33 @@
     padding: 32px;
     text-align: center;
   }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 4px 0 8px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #4b5563;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot.ok    { background: #22c55e; }
+  .dot.fail  { background: #ef4444; }
+  .dot.warn  { background: #eab308; }
+  .dot.info  { background: #3b82f6; }
+  .dot.nodata { background: #4b5563; }
 
   @media (max-width: 900px) {
     main { padding: 12px 16px 16px; }

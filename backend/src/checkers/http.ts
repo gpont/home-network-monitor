@@ -65,19 +65,21 @@ export async function runHttpChecks(urls: string[]): Promise<HttpResult[]> {
 }
 
 export function parseCaptivePortalResponse(status: number, body: string): "clean" | "detected" {
+  // Firefox captive portal URL returns plain text "success" when clean
   return status === 200 && body.trim() === "success" ? "clean" : "detected";
 }
 
-export function parseRedirectResponse(status: number, location: string | null): "ok" | "intercepted" {
-  return (status === 301 || status === 302) && location?.startsWith("https://") ? "ok" : "intercepted";
+export function parseRedirectResponse(finalUrl: string): "ok" | "intercepted" {
+  // If we followed redirects and ended up at https:// — redirect chain is clean
+  return finalUrl.startsWith("https://") ? "ok" : "intercepted";
 }
 
 export async function checkCaptivePortal(): Promise<{ status: "clean" | "detected" | "error" }> {
   const timestamp = Date.now();
   try {
-    // Use Apple's captive portal detection URL
-    const res = await fetch("http://captive.apple.com/hotspot-detect.html", {
-      redirect: "manual",
+    // Firefox detectportal returns plain text "success" (200) when clean
+    const res = await fetch("http://detectportal.firefox.com/", {
+      redirect: "follow",
       signal: AbortSignal.timeout(8000),
     });
     const body = await res.text();
@@ -93,12 +95,13 @@ export async function checkCaptivePortal(): Promise<{ status: "clean" | "detecte
 export async function checkHttpRedirect(): Promise<{ status: "ok" | "intercepted" | "error" }> {
   const timestamp = Date.now();
   try {
+    // Follow redirects and check if we end up at https:// — works reliably across runtimes
     const res = await fetch("http://www.google.com", {
-      redirect: "manual",
+      redirect: "follow",
       signal: AbortSignal.timeout(8000),
     });
-    const location = res.headers.get("location");
-    const status = parseRedirectResponse(res.status, location);
+    const finalUrl = res.url || "";
+    const status = parseRedirectResponse(finalUrl);
     await db.insert(httpRedirectChecks).values({ status, timestamp });
     return { status };
   } catch {

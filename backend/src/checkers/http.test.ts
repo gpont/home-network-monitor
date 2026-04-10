@@ -14,16 +14,16 @@ describe("parseCaptivePortalResponse", () => {
 });
 
 describe("parseRedirectResponse", () => {
-  test("ok when status is 301 and Location starts with https://", () => {
-    expect(parseRedirectResponse(301, "https://google.com")).toBe("ok");
+  test("ok when final URL is https://", () => {
+    expect(parseRedirectResponse("https://www.google.com/")).toBe("ok");
   });
-  test("ok when status is 302 and Location starts with https://", () => {
-    expect(parseRedirectResponse(302, "https://example.com")).toBe("ok");
+  test("ok when final URL is https:// with path", () => {
+    expect(parseRedirectResponse("https://example.com/path?q=1")).toBe("ok");
   });
-  test("intercepted when Location is not https", () => {
-    expect(parseRedirectResponse(301, "http://google.com")).toBe("intercepted");
+  test("intercepted when final URL is still http://", () => {
+    expect(parseRedirectResponse("http://captive.portal.com/")).toBe("intercepted");
   });
-  test("intercepted when Location is null", () => {
-    expect(parseRedirectResponse(200, null)).toBe("intercepted");
+  test("intercepted when final URL is empty", () => {
+    expect(parseRedirectResponse("")).toBe("intercepted");
   });
 });
