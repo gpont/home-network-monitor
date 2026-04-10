@@ -1,7 +1,7 @@
 import type { Config } from "./config.ts";
-import { detectGateway, runPingChecks } from "./checkers/ping.ts";
-import { runDnsChecks } from "./checkers/dns.ts";
-import { runHttpChecks } from "./checkers/http.ts";
+import { detectGateway, runPingChecks, runTcpConnectCheck } from "./checkers/ping.ts";
+import { runDnsChecks, checkDnsExtras } from "./checkers/dns.ts";
+import { runHttpChecks, checkCaptivePortal, checkHttpRedirect } from "./checkers/http.ts";
 import { runTraceroute, extractIspHop } from "./checkers/traceroute.ts";
 import { runSpeedtest } from "./checkers/speedtest.ts";
 import { checkPublicIp, loadLastIp } from "./checkers/publicip.ts";
@@ -13,6 +13,8 @@ import {
   checkNetworkStats,
   checkSslCert,
 } from "./checkers/misc.ts";
+import { checkInterface } from "./checkers/interface.ts";
+import { checkSystem } from "./checkers/system.ts";
 import { scheduleCleanup } from "./db/cleanup.ts";
 import { db } from "./db/client.ts";
 
@@ -106,6 +108,37 @@ export async function startScheduler(config: Config, broadcast: BroadcastFn) {
     const results = await Promise.all(config.sslHosts.map(checkSslCert));
     broadcast("ssl", results);
   });
+
+  scheduleInterval("interface", config.intervals.ping, async () => {
+    const result = await checkInterface();
+    broadcast("interface", result);
+  });
+
+  scheduleInterval("system", config.intervals.publicIp, async () => {
+    const result = await checkSystem();
+    broadcast("system", result);
+  });
+
+  scheduleInterval("tcpConnect", config.intervals.ping, async () => {
+    const result = await runTcpConnectCheck("1.1.1.1", 443);
+    broadcast("tcpConnect", result);
+  });
+
+  scheduleInterval("dnsExtras", config.intervals.publicIp, async () => {
+    const servers = buildDnsServers(config, gatewayIp);
+    const result = await checkDnsExtras(servers);
+    broadcast("dnsExtra", result);
+  });
+
+  scheduleInterval("captivePortal", config.intervals.http, async () => {
+    const result = await checkCaptivePortal();
+    broadcast("captivePortal", result);
+  });
+
+  scheduleInterval("httpRedirect", config.intervals.http, async () => {
+    const result = await checkHttpRedirect();
+    broadcast("httpRedirect", result);
+  });
 }
 
 async function runAll(
@@ -122,6 +155,11 @@ async function runAll(
     checkIpv6().then((r) => broadcast("ipv6", r)),
     checkNetworkStats().then((r) => broadcast("networkStats", r)),
     checkDhcp().then((r) => broadcast("dhcp", r)),
+    checkInterface().then((r) => broadcast("interface", r)),
+    checkSystem().then((r) => broadcast("system", r)),
+    runTcpConnectCheck("1.1.1.1", 443).then((r) => broadcast("tcpConnect", r)),
+    checkCaptivePortal().then((r) => broadcast("captivePortal", r)),
+    checkHttpRedirect().then((r) => broadcast("httpRedirect", r)),
   ];
 
   await Promise.allSettled(checks);
@@ -133,6 +171,9 @@ async function runAll(
     broadcast("traceroute", trResult);
     await checkCgnat(ispHopIp).then((r) => broadcast("cgnat", r));
   }
+
+  // DNS extras after traceroute so gateway IP is available
+  await checkDnsExtras(dnsServers).then((r) => broadcast("dnsExtra", r)).catch(() => {});
 
   // SSL and MTU are slower, run async
   Promise.all(config.sslHosts.map(checkSslCert)).then((r) => broadcast("ssl", r));
