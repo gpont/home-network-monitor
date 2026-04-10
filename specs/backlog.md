@@ -76,3 +76,34 @@
 
 - [x] **T23** — GitHub Actions CI/CD · [plans/23-cicd-release.md](plans/23-cicd-release.md#t23) — .github/workflows/docker.yml, push to main → :latest, tag v* → :vX.Y.Z
 - [x] **T24** — Интеграционный тест + первый релиз · [plans/23-cicd-release.md](plans/23-cicd-release.md#t24) — 56 тестов зелёных, Docker работает, дашборд подтверждён
+
+---
+
+## Batch 4 — i18n + macOS + Manual Trigger (после T24, параллельно)
+> T26, T27, T28 не зависят друг от друга · T25 блокирует T29
+
+- [x] **T25** — i18n core: locale store + t() + detectLocale · [plans/25-i18n.md](plans/25-i18n.md) — locale store, t() derived, fallback chain, 9 тестов зелёных
+- [x] **T26** — ru.ts + en.ts: все ~500 ключей + LangSwitcher · [plans/26-i18n-strings.md](plans/26-i18n-strings.md) — ~406 ключей на локаль, LangSwitcher.svelte создан
+- [ ] **T27** — macOS: interface.ts + system.ts + networkStats по платформе · [plans/27-macos.md](plans/27-macos.md)
+- [ ] **T28** — Manual Trigger API: POST /api/run/:type (+ 409 guard) · [plans/28-run-api.md](plans/28-run-api.md)
+
+---
+
+## Batch 5 — i18n migration (после T26)
+> T29, T30 параллельно
+
+- [x] **T29** — checks.ts: все строки → i18n ключи + configHint + runnable + status remap · [plans/29-checks-i18n.md](plans/29-checks-i18n.md) — все 53 чека мигрированы
+- [x] **T30** — diagnostics.ts: title/description/steps → i18n ключи · [plans/30-diag-i18n.md](plans/30-diag-i18n.md) — все 12 правил мигрированы
+
+---
+
+## Batch 6 — Components (после T29 + T30 + T28)
+
+- [x] **T31** — CheckRow.svelte: $t() + configHint needs_config + кнопка Run now · [plans/31-checkrow-ux.md](plans/31-checkrow-ux.md) — i18n интегрирован
+- [x] **T32** — DiagBanner + LayerCard + App.svelte: $t() завершение + LangSwitcher · [plans/32-components-i18n.md](plans/32-components-i18n.md) — все компоненты переведены
+
+---
+
+## T33 — README (независимо от остальных)
+
+- [ ] **T33** — README: badges + hero screenshot + Contributing section · [plans/33-readme.md](plans/33-readme.md)

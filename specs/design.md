@@ -74,11 +74,48 @@ Docker      — single container, network_mode: host, cap_add: NET_RAW
     [если FAIL] → инструкция что делать (красный блок)
 ```
 
-- **●** зелёный `✓` / красный `✗` / жёлтый `!` / серый `?` (данные устарели или загрузка)
-- Название: серое если OK, красное если FAIL
-- Описание: всегда видно, мелкий серый текст
-- Fix-инструкция: появляется **только при FAIL**, красный блок с пошаговым текстом
-- Чеки с редким интервалом (speedtest — 1h, SSL — 24h) показывают последнее значение с временной меткой: `87 дней (проверено 3ч назад)`
+#### Система статусов (5 вариантов)
+
+| Статус | Смысл | Визуал |
+|---|---|---|
+| `ok` | Данные есть, всё в норме | Зелёный ✓ |
+| `warn` | Деградация или нужна настройка | Жёлтый ! |
+| `fail` | Сломано, требует действий | Красный ✗ |
+| `unknown` | Данных ещё нет (интервал не истёк) | Серый – |
+| `stale` | Данные устарели (чекер завис) | Серый – |
+
+Статус `info` удалён. Бывшие `info`-чеки переведены: `iface_speed`, `wan_type`, `isp_dns` → `ok`; `iface_ipv6_ll`, `iface_arp` → `ok`/`warn`.
+
+#### Поведение по состоянию
+
+- `ok` / `warn` / `fail` → показывается значение
+- `fail` → красный блок с пошаговым fix-текстом (i18n-ключи через `$t()`)
+- `warn` с `configHint` → жёлтый блок "Configuration needed:" с шагами настройки
+- `unknown` + `configHint` → жёлтый блок "Configuration needed:" с шагами
+- `unknown` без `configHint` → серый курсивный текст "Data available in ~{n} min" (n = staleAfterMs / 3 / 60000)
+- `stale` → серый текст "Data stale — {n} min ago"
+
+#### Кнопка "Run now"
+
+Для медленных чеков (speedtest, traceroute, mtu, cgnat, publicip): если статус `unknown` или `stale` — кнопка "▶ Run now".  
+Клик → `POST /api/run/:runType`. Кнопка переходит в "running..." (disabled). WebSocket обновляет статус → кнопка пропадает.  
+409 Conflict если чекер уже запущен → кнопка показывает "already running".
+
+#### CheckDefinition — новые поля
+
+```typescript
+import type { TranslationKey } from './i18n/ru.ts';
+
+interface CheckDefinition {
+  // ...existing fields...
+  noDataHint?: TranslationKey;    // серый italic: почему нет данных
+  configHint?: TranslationKey[];  // жёлтый блок: шаги настройки (массив ключей)
+  runnable?: boolean;             // показывать кнопку "Run now"
+  runType?: 'speedtest' | 'traceroute' | 'mtu' | 'cgnat' | 'publicip';
+}
+```
+
+Чеки с редким интервалом (speedtest — 1h, SSL — 24h) показывают последнее значение с временной меткой.
 
 ### 3.4 Layer Card
 
@@ -377,6 +414,119 @@ interface PingStatsCheck {
   timestamp: number;
 }
 ```
+
+### 6.2 Manual Trigger API
+
+```
+POST /api/run/:type
+```
+
+Где `:type` = `speedtest` | `traceroute` | `mtu` | `cgnat` | `publicip`
+
+- Запускает соответствующий чекер немедленно вне расписания
+- Сохраняет результат в БД
+- Возвращает `{ ok: true }`
+- Если чекер уже выполняется → `409 Conflict` `{ error: 'already running' }`
+- Фронтенд получает обновление через существующий WebSocket
+
+---
+
+## 7. i18n Architecture
+
+Два языка: Russian (RU, default для ru-*) и English (EN, fallback для всех остальных).  
+Переключатель языка (🇷🇺 RU | 🇬🇧 EN) в header. Выбор сохраняется в `localStorage`.
+
+### Файлы
+
+```
+frontend/src/lib/i18n/
+  index.ts          — locale store (writable), t() derived store, detectLocale()
+  ru.ts             — источник правды, экспортирует TranslationKey
+  en.ts             — Record<TranslationKey, string> (compile error если ключ пропущен)
+
+frontend/src/components/
+  LangSwitcher.svelte — кнопки-флаги в header
+```
+
+### Принцип типобезопасности
+
+```typescript
+// ru.ts — источник правды
+const ru = { 'ui.live': 'Live', ... } as const;
+export type TranslationKey = keyof typeof ru;
+export default ru as Record<TranslationKey, string>;
+
+// en.ts — все ключи обязательны (TypeScript ошибка если пропущено)
+import type { TranslationKey } from './ru.ts';
+const en: Record<TranslationKey, string> = { 'ui.live': 'Live', ... };
+export default en;
+```
+
+Fallback-цепочка: текущий locale → RU → raw key.
+
+### Соглашение по именам ключей
+
+| Namespace | Паттерн | Пример |
+|---|---|---|
+| UI strings | `ui.<name>` | `ui.live`, `ui.run_now`, `ui.data_in` |
+| Layer names | `layer.<id>.name` | `layer.1.name` |
+| Check name | `check.<id>.name` | `check.iface_up.name` |
+| Check description | `check.<id>.desc` | `check.iface_up.desc` |
+| Check fix step | `check.<id>.fix.<n>` | `check.iface_up.fix.0` |
+| Check noData hint | `check.<id>.noData` | `check.gw_ping.noData` |
+| Check config step | `check.<id>.config.<n>` | `check.gw_ping.config.0` |
+| Diagnostic title | `diag.<id>.title` | `diag.R1.title` |
+| Diagnostic description | `diag.<id>.desc` | `diag.R1.desc` |
+| Diagnostic step | `diag.<id>.step.<n>` | `diag.R1.step.0` |
+
+Примерно ~500 ключей на локаль. Ключи **никогда не удаляются**, только помечаются как deprecated — RU fallback всегда работает.
+
+### Новые UI-ключи
+
+| Ключ | RU | EN |
+|---|---|---|
+| `ui.run_now` | ▶ Запустить сейчас | ▶ Run now |
+| `ui.running` | запускается... | running... |
+| `ui.already_running` | уже запущен | already running |
+| `ui.needs_config` | Настройка нужна: | Configuration needed: |
+| `ui.data_in` | Данные появятся через ~{n} мин | Data available in ~{n} min |
+| `ui.data_stale` | Данные устарели — {n} мин назад | Data stale — {n} min ago |
+
+---
+
+## 8. macOS Platform Support
+
+Чекеры используют Linux-команды (`/proc/net/dev`, `ip link`, `arp`). На macOS эти команды недоступны.
+
+**OS detection:** `process.platform === 'darwin'` → macOS-ветка, иначе Linux.
+
+### interface.ts
+
+| Данные | Linux | macOS |
+|---|---|---|
+| Список интерфейсов + статус | `ip link show` | `ifconfig -a` |
+| IPv4 адрес | `ip addr show` | `ifconfig en0` (парсинг `inet`) |
+| IPv6 link-local | `ip addr show` | `ifconfig en0` (парсинг `inet6 fe80`) |
+| Default gateway | `ip route show default` | `netstat -rn \| grep default` |
+| ARP шлюза (MAC) | `arp -n <ip>` | `arp -n <ip>` (работает на обоих) |
+| Connection type | PID dhclient / PPPoE | `ipconfig getpacket en0` |
+| rx/tx errors + drops | `/proc/net/dev` | `netstat -I en0 -b` |
+
+### system.ts
+
+| Данные | Linux | macOS |
+|---|---|---|
+| DHCP lease | `/var/lib/dhclient/*.leases` | `ipconfig getpacket en0` |
+| resolv.conf | `/etc/resolv.conf` | `/etc/resolv.conf` (работает на обоих) |
+| NTP | `ntpq -pn` | `sntp -t 1 pool.ntp.org` |
+
+### networkStats
+
+| Linux | macOS |
+|---|---|
+| `/proc/net/dev` | `netstat -I en0 -b` (парсинг колонок) |
+
+> В Docker-контейнере на Linux все команды работают. macOS-ветки нужны для локальной разработки без Docker.
 
 ---
 
