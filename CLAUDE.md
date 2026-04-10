@@ -8,138 +8,44 @@
 
 ---
 
-## Архитектура
+## Спецификации
 
-Один Docker-контейнер (multi-stage build). Backend раздаёт API и статику фронтенда.
-
-```
-backend/    — Bun + Hono + Drizzle ORM + SQLite
-frontend/   — Svelte 5 + Vite (без Chart.js — графики убраны)
-data/       — Docker volume, здесь лежит monitor.db
-specs/      — спецификации проекта
-```
-
----
-
-## Backend (`backend/src/`)
-
-| Файл | Назначение |
+| Файл | Когда читать |
 |---|---|
-| `index.ts` | Точка входа. Hono app + `Bun.serve()` с WebSocket. Раздаёт статику из `public/` |
-| `config.ts` | Все настройки: ping-таргеты, DNS-серверы, HTTP-цели, интервалы. Читает env vars с дефолтами |
-| `scheduler.ts` | Запускает все чекеры по интервалам. Детектирует gateway/ISP-хоп при старте. WebSocket broadcast |
-| `db/schema.ts` | Drizzle-схемы всех таблиц (9 существующих + 6 новых) |
-| `db/client.ts` | Инициализация SQLite + Drizzle + DDL-миграция при старте |
-| `db/cleanup.ts` | Ежедневная очистка старых данных (cron-like setInterval) |
-| `routes/api.ts` | Все REST-эндпоинты |
-| `types.d.ts` | Ручные типы для `speedtest-net` |
-
-### Чекеры (`backend/src/checkers/`)
-
-| Файл | Что делает | Интервал |
-|---|---|---|
-| `ping.ts` | ICMP ping + TCP connect тест (1.1.1.1:443), парсит RTT, loss%, jitter | 30s |
-| `dns.ts` | dig к резолверам + consistency/NXDOMAIN/hijacking/DoH чеки | 60s / 5min |
-| `http.ts` | fetch к HTTP-целям + captive portal + redirect check | 60s |
-| `traceroute.ts` | traceroute, сравнивает с предыдущим, детектирует black hole | 10min |
-| `speedtest.ts` | speedtest-net | 1hr |
-| `publicip.ts` | ipify.org, детектирует смену IP | 5min |
-| `misc.ts` | CGNAT, MTU, IPv6, DHCP/PPPoE, SSL (порог 30 дней) | разные |
-| `interface.ts` | ip link/addr/route, arp -n — статус сетевого интерфейса | 30s |
-| `system.ts` | NTP (UDP к pool.ntp.org), /etc/resolv.conf | 5min |
-| `utils.ts` | spawn() — обёртка Bun.spawn с таймаутом |
-
-### API эндпоинты
-
-```
-GET /api/status   — все 53 чека текущего состояния (расширенный ответ, см. specs/arch.md)
-WS  /ws           — push новых результатов: {event, data, timestamp}
-GET /*            — статика Svelte (SPA fallback)
-```
-
-История-эндпоинты убраны из дашборда (только текущее состояние), но остаются для отладки:
-```
-GET /api/history/ping, /api/history/dns, /api/history/http
-GET /api/speedtest, /api/traceroute, /api/events, /api/network-stats, /api/ssl
-```
+| `specs/backlog.md` | **Всегда первым** — список задач со статусами |
+| `specs/design.md` | UI/UX макеты, 53 чека, правила диагностики |
+| `specs/arch.md` | DB-схема, API-контракт, системная диаграмма, Dockerfile |
+| `specs/plans/` | TDD-шаги для конкретной задачи — читай только нужный файл |
 
 ---
 
-## Frontend (`frontend/src/`)
+## Агентный воркфлоу
 
-| Файл/папка | Назначение |
-|---|---|
-| `App.svelte` | Главный дашборд: PathChain + DiagBanners + LayerCards |
-| `lib/api.ts` | Типизированные fetch-обёртки |
-| `lib/ws.ts` | WebSocket-клиент с авто-реконнектом |
-| `lib/types.ts` | TypeScript-интерфейсы для всех данных API |
-| `lib/checks.ts` | Определения всех 53 чеков: id, layer, name, description, getStatus(), getValue(), getFix() |
-| `lib/diagnostics.ts` | Движок правил: evaluate(status) → DiagnosticResult[] |
-| `components/PathChain.svelte` | Цепочка узлов пути пакета, цвет по статусу слоя |
-| `components/DiagBanner.svelte` | Один диагностический баннер (severity + title + steps) |
-| `components/LayerCard.svelte` | Карточка слоя: заголовок + список чеков + cascade warning |
-| `components/CheckRow.svelte` | Строка чека: иконка + название + описание + fix-блок при FAIL |
+### Начало сессии
+1. Прочитай `specs/backlog.md`
+2. Найди задачи со статусом `[~]` — если есть, продолжай их
+3. Если `[~]` нет — возьми первую `[ ]` в ближайшем разблокированном батче
+4. Прочитай файл плана для этой задачи. Если ссылка содержит якорь (`#t01`) — перейди сразу к этому разделу, не читай весь файл
 
-Vite-proxy в dev: `/api` и `/ws` → `localhost:3000`.
-Сборка → `../backend/public/`.
+### Параллельные задачи
+Задачи внутри одного батча независимы — их можно отдать разным агентам одновременно.
+Не начинай батч, пока не закрыты `[x]` все его блокировщики.
 
----
+### Цикл реализации (TDD)
+1. Напиши тест → убедись что падает (red)
+2. Напиши реализацию → убедись что проходит (green)
+3. После каждого изменения: `bun test && bun run typecheck`
+4. Если что-то падает — не переходи дальше, исправь сначала
 
-## База данных (SQLite)
+### Завершение задачи
+1. `bun test` — все тесты зелёные
+2. Напиши пользователю план мануальной проверки (из секции "Мануальная проверка" в файле плана)
+3. Дождись подтверждения пользователя
+4. Если баги — зафикси, повтори шаги 1-3
+5. Если всё ок — обнови `specs/backlog.md`: статус `[ ]` → `[x]`, добавь одну строку что сделано
 
-Все `timestamp` — Unix milliseconds.
-
-**Существующие таблицы:** `ping_results`, `dns_results`, `http_results`, `traceroute_results`, `speedtest_results`, `public_ip_events`, `network_stats`, `ssl_checks`, `misc_checks`.
-
-**Новые таблицы:** `interface_checks`, `tcp_connect_results`, `dns_extra_checks`, `captive_portal_checks`, `http_redirect_checks`, `ntp_checks`.
-
-Полная схема с колонками: `specs/arch.md`.
-
-### Data Retention (очистка раз в сутки)
-
-| Таблица | Хранить |
-|---|---|
-| ping_results, dns_results, http_results, captive_portal_checks, http_redirect_checks | 48 часов |
-| traceroute_results, misc_checks, interface_checks, tcp_connect_results, dns_extra_checks, ntp_checks | 30 дней |
-| speedtest_results, public_ip_events, ssl_checks, network_stats | 90 дней |
-
----
-
-## Docker и CI/CD
-
-```bash
-docker-compose up --build -d   # сборка и запуск
-docker-compose logs -f         # логи
-```
-
-`docker-compose.yml`: `network_mode: host` (gateway detection, traceroute), `cap_add: NET_RAW` (ICMP ping), `restart: unless-stopped`.
-
-**Alpine packages** (нужны в Dockerfile): `iproute2` (ip link/addr/route), `iputils` (ping -M do), `bind-tools` (dig), `traceroute`.
-
-**GitHub Actions** (`.github/workflows/docker.yml`):
-- Trigger: push в `main` → image `ghcr.io/gpont/home-network-monitor:latest`
-- Trigger: tag `v*` → image `:vX.Y.Z` + обновляет `:latest`
-- Registry: GitHub Container Registry (ghcr.io), auth через `GITHUB_TOKEN`
-- Platform: `linux/amd64`
-- Steps: checkout → setup Bun → build frontend → docker build → docker push
-
----
-
-## Конфигурация
-
-Через env vars (`.env` файл рядом с `docker-compose.yml`):
-
-| Переменная | Default | Описание |
-|---|---|---|
-| `PORT` | `3000` | Порт сервера |
-| `DB_PATH` | `/app/data/monitor.db` | Путь к SQLite |
-| `PING_TARGETS` | `8.8.8.8:Google DNS,1.1.1.1:Cloudflare,9.9.9.9:Quad9` | Comma-separated `ip:label` |
-| `HTTP_TARGETS` | `https://google.com,https://cloudflare.com,https://github.com` | Comma-separated URLs |
-| `DNS_SERVERS` | `8.8.8.8:Google,1.1.1.1:Cloudflare` | Comma-separated `ip:label` |
-| `SSL_HOSTS` | `google.com,cloudflare.com,github.com` | Comma-separated хосты |
-| `IPERF3_SERVER` | — | IP iperf3-сервера (опционально) |
-
-Gateway и ISP-хоп определяются автоматически при старте.
+### После изменений фронтенда
+Дополнительно к шагу 3: `cd frontend && bun run build`
 
 ---
 
