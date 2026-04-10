@@ -8,6 +8,8 @@
   import DiagBanner from "./components/DiagBanner.svelte";
   import LayerCard from "./components/LayerCard.svelte";
   import type { StatusResponse } from "./lib/types.ts";
+  import { t } from './lib/i18n/index.ts';
+  import LangSwitcher from './components/LangSwitcher.svelte';
 
   let status = $state<StatusResponse | null>(null);
   let lastUpdated = $state<number | null>(null);
@@ -56,10 +58,11 @@
     <div class="title">📡 Network Monitor</div>
     <div class="header-right">
       {#if lastUpdated}
-        <span class="updated">Updated {Math.floor((Date.now() - lastUpdated) / 1000)}s ago</span>
+        <span class="updated">{$t('ui.updated', { n: Math.floor((Date.now() - lastUpdated) / 1000) })}</span>
       {/if}
+      <LangSwitcher />
       <div class="ws-badge" class:connected={$wsConnected}>
-        {$wsConnected ? "Live" : "Reconnecting..."}
+        {$wsConnected ? $t('ui.live') : $t('ui.reconnecting')}
       </div>
     </div>
   </header>
@@ -67,11 +70,11 @@
   <div class="path-section">
     <PathChain layers={layerStatuses} onNodeClick={scrollToLayer} />
     <div class="legend">
-      <span class="legend-item"><span class="dot ok"></span>OK — проверка пройдена</span>
-      <span class="legend-item"><span class="dot fail"></span>Ошибка — требует внимания</span>
-      <span class="legend-item"><span class="dot warn"></span>Предупреждение</span>
-      <span class="legend-item"><span class="dot info"></span>Информация (без критериев)</span>
-      <span class="legend-item"><span class="dot nodata"></span>Нет данных</span>
+      <span class="legend-item"><span class="dot ok"></span>{$t('ui.legend_ok')}</span>
+      <span class="legend-item"><span class="dot fail"></span>{$t('ui.legend_fail')}</span>
+      <span class="legend-item"><span class="dot warn"></span>{$t('ui.legend_warn')}</span>
+      <span class="legend-item"><span class="dot info"></span>{$t('ui.legend_info')}</span>
+      <span class="legend-item"><span class="dot nodata"></span>{$t('ui.legend_nodata')}</span>
     </div>
   </div>
 
@@ -94,7 +97,7 @@
         />
       {/each}
     {:else}
-      <div class="loading">Loading...</div>
+      <div class="loading">{$t('ui.loading')}</div>
     {/if}
   </main>
 </div>
