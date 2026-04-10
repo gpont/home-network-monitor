@@ -155,6 +155,10 @@ export interface CheckDefinition {
   layer: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   name: string;
   description: string;
+  /** Plain-language explanation shown in tooltip: what does this check mean for the user? */
+  hint: string;
+  /** Explains why data might be missing for this specific check */
+  noDataHint?: string;
   staleAfterMs: number;
   getValue(s: StatusResponse): string | null;
   getStatus(s: StatusResponse): CheckStatus;
