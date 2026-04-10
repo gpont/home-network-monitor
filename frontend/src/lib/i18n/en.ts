@@ -2,8 +2,406 @@
 import type { TranslationKey } from './ru.ts';
 
 const en: Record<TranslationKey, string> = {
-  'ui.loading': 'Loading...',
-  'ui.updated': 'Updated {n}s ago',
+  // ── UI strings ───────────────────────────────────────────
+  'ui.live':             'Live',
+  'ui.reconnecting':     'Reconnecting...',
+  'ui.updated':          'Updated {n}s ago',
+  'ui.loading':          'Loading...',
+  'ui.what_to_do':       'What to do:',
+  'ui.cascade_warning':  'Likely cascading from an upstream layer issue',
+  'ui.legend_ok':        'OK — check passed',
+  'ui.legend_fail':      'Error — needs attention',
+  'ui.legend_warn':      'Warning',
+  'ui.legend_info':      'Info (no criteria)',
+  'ui.legend_nodata':    'No data',
+  'ui.badge_errors':     '{n} errors',
+  'ui.badge_ok':         '{ok}/{total} ✓',
+  'ui.stale':            'data is stale',
+  'ui.no_data':          'data not yet received',
+
+  // ── Layers ────────────────────────────────────────────────
+  'layer.1.name': 'Device / Interface',
+  'layer.2.name': 'Gateway / Local',
+  'layer.3.name': 'ISP / WAN',
+  'layer.4.name': 'Internet (L3)',
+  'layer.5.name': 'DNS',
+  'layer.6.name': 'HTTP / Application',
+  'layer.7.name': 'Security / Advanced',
+
+  // ── Checks — Layer 1 ─────────────────────────────────────
+  'check.iface_up.name':     'Interface active',
+  'check.iface_up.hint':     'Network cable is connected and interface is up. If DOWN — device is physically disconnected.',
+  'check.iface_up.nodata':   'Unavailable inside Docker with bridge network. Works with network_mode: host on Linux.',
+  'check.iface_up.fix.0':    'Check cable or WiFi',
+  'check.iface_up.fix.1':    'Restart network adapter',
+  'check.iface_up.fix.2':    'Check interface status: ip link show',
+
+  'check.iface_ipv4.name':   'IPv4 address',
+  'check.iface_ipv4.hint':   'Device has an IP address assigned on the local network. Without it — device is invisible to router.',
+  'check.iface_ipv4.nodata': 'Unavailable inside Docker with bridge network. Works with network_mode: host on Linux.',
+  'check.iface_ipv4.fix.0':  'Check DHCP server on router',
+  'check.iface_ipv4.fix.1':  'Try: dhclient eth0',
+  'check.iface_ipv4.fix.2':  'Restart network interface',
+
+  'check.iface_gateway.name':   'Default gateway',
+  'check.iface_gateway.hint':   'Router is set as the internet gateway. Without it — traffic has nowhere to go.',
+  'check.iface_gateway.nodata': 'Unavailable inside Docker with bridge network. Works with network_mode: host on Linux.',
+  'check.iface_gateway.fix.0':  'Check router settings',
+  'check.iface_gateway.fix.1':  'Add route: ip route add default via <gateway>',
+
+  'check.iface_dhcp.name':   'DHCP lease',
+  'check.iface_dhcp.hint':   'How the device got its IP: automatically (DHCP), via PPPoE or manually.',
+  'check.iface_dhcp.fix.0':  'Check network settings',
+  'check.iface_dhcp.fix.1':  'Make sure DHCP is enabled on router',
+
+  'check.iface_errors.name':   'No interface errors',
+  'check.iface_errors.hint':   'rx_errors + tx_errors = 0. Non-zero counters indicate cable or port issues.',
+  'check.iface_errors.fix.0':  'Check cable/connection',
+  'check.iface_errors.fix.1':  'See: ethtool eth0',
+
+  'check.iface_drops.name':   'No packet drops',
+  'check.iface_drops.hint':   'rx_dropped + tx_dropped = 0. Drops indicate buffer overload.',
+  'check.iface_drops.fix.0':  'Possible network overload',
+  'check.iface_drops.fix.1':  'Check network card buffers',
+
+  'check.iface_ipv6_ll.name':   'IPv6 link-local',
+  'check.iface_ipv6_ll.hint':   'IPv6 link-local address (fe80::) is assigned. Required for IPv6 to work.',
+  'check.iface_ipv6_ll.fix.0':  'IPv6 may be disabled on interface',
+  'check.iface_ipv6_ll.fix.1':  'Check: sysctl net.ipv6.conf.all.disable_ipv6',
+
+  'check.iface_arp.name':   'ARP gateway entry',
+  'check.iface_arp.hint':   'Gateway MAC address is in ARP table — router sees device at L2 level.',
+  'check.iface_arp.fix.0':  'Gateway not responding to ARP',
+  'check.iface_arp.fix.1':  'Check: arp -n',
+  'check.iface_arp.fix.2':  'Possible local network issue',
+
+  // ── Checks — Layer 2 ─────────────────────────────────────
+  'check.gw_ping.name':   'Gateway ping',
+  'check.gw_ping.hint':   'ICMP ping to router — RTT < 5ms. Basic router reachability check.',
+  'check.gw_ping.fix.0':  'Router unreachable',
+  'check.gw_ping.fix.1':  'Check cable between server and router',
+  'check.gw_ping.fix.2':  'Reboot router',
+
+  'check.gw_ping_loss.name':   'Gateway stability',
+  'check.gw_ping_loss.hint':   'Packet loss to router < 1% over 15 min. Shows local network stability.',
+  'check.gw_ping_loss.fix.0':  'Unstable local network',
+  'check.gw_ping_loss.fix.1':  'Check cable/WiFi signal',
+  'check.gw_ping_loss.fix.2':  'Check if router is overloaded',
+
+  'check.gw_dns.name':   'Router DNS',
+  'check.gw_dns.hint':   'Router DNS server responds in < 100ms.',
+  'check.gw_dns.fix.0':  'Router DNS not responding',
+  'check.gw_dns.fix.1':  'Reboot router',
+  'check.gw_dns.fix.2':  'Temporarily use 8.8.8.8 in /etc/resolv.conf',
+
+  'check.gw_mtu.name':   'Local network MTU',
+  'check.gw_mtu.hint':   'No fragmentation of 1500-byte packets. Fragmentation slows down connection.',
+  'check.gw_mtu.fix.0':  'MTU issue — fragmentation',
+  'check.gw_mtu.fix.1':  'Check MTU settings on router',
+  'check.gw_mtu.fix.2':  'Try reducing MTU to 1492 (PPPoE)',
+
+  'check.gw_jitter.name':   'Gateway jitter',
+  'check.gw_jitter.hint':   'RTT instability to router < 5ms. High jitter = unstable connection.',
+  'check.gw_jitter.fix.0':  'Unstable WiFi or cable',
+  'check.gw_jitter.fix.1':  'Try another port on router',
+  'check.gw_jitter.fix.2':  'Reduce network load',
+
+  'check.iface_speed.name': 'Interface speed',
+  'check.iface_speed.hint': 'Interface information (informational check).',
+
+  // ── Checks — Layer 3 ─────────────────────────────────────
+  'check.isp_hop.name': 'ISP first hop',
+  'check.isp_hop.hint': 'First ISP hop in traceroute is reachable.',
+
+  'check.isp_hop_rtt.name':   'ISP hop RTT',
+  'check.isp_hop_rtt.hint':   'Latency to first ISP hop < 20ms.',
+  'check.isp_hop_rtt.fix.0':  'High latency at ISP',
+  'check.isp_hop_rtt.fix.1':  'Contact your ISP',
+  'check.isp_hop_rtt.fix.2':  'Check line quality',
+
+  'check.wan_type.name': 'WAN type',
+  'check.wan_type.hint': 'ISP connection type detected.',
+
+  'check.cgnat.name':   'No CGNAT',
+  'check.cgnat.hint':   'Public IP is not behind ISP CGNAT. CGNAT blocks port forwarding.',
+  'check.cgnat.fix.0':  'You are behind ISP CGNAT',
+  'check.cgnat.fix.1':  "Port forwarding won't work",
+  'check.cgnat.fix.2':  'Request dedicated IP from ISP',
+
+  'check.public_ip.name':   'Public IP',
+  'check.public_ip.hint':   'Public IPv4 address detected.',
+  'check.public_ip.fix.0':  'Public IP not detected',
+  'check.public_ip.fix.1':  'Check internet connection',
+  'check.public_ip.fix.2':  'Check router settings',
+
+  'check.route_stable.name':   'Route stable',
+  'check.route_stable.hint':   'Traceroute path has not changed since last check.',
+  'check.route_stable.fix.0':  'Route changed',
+  'check.route_stable.fix.1':  'Possible ISP switching',
+  'check.route_stable.fix.2':  'Monitor stability',
+
+  'check.isp_dns.name': 'ISP DNS',
+  'check.isp_dns.hint': 'ISP DNS server information.',
+
+  // ── Checks — Layer 4 ─────────────────────────────────────
+  'check.ping_8888.name':   'Ping 8.8.8.8',
+  'check.ping_8888.hint':   'ICMP ping to Google DNS — RTT < 50ms. Basic internet check.',
+  'check.ping_8888.fix.0':  'No internet connection',
+  'check.ping_8888.fix.1':  'Check ISP cable',
+  'check.ping_8888.fix.2':  'Reboot router',
+
+  'check.ping_1111.name':   'Ping 1.1.1.1',
+  'check.ping_1111.hint':   'ICMP ping to Cloudflare DNS — RTT < 50ms.',
+  'check.ping_1111.fix.0':  'No internet connection (Cloudflare)',
+  'check.ping_1111.fix.1':  'Check internet connection',
+
+  'check.ping_9999.name':   'Ping 9.9.9.9',
+  'check.ping_9999.hint':   'ICMP ping to Quad9 DNS — RTT < 100ms.',
+  'check.ping_9999.fix.0':  'No connection to Quad9',
+  'check.ping_9999.fix.1':  'Check internet connection',
+
+  'check.tcp_443.name':   'TCP connect 443',
+  'check.tcp_443.hint':   'TCP connection to 1.1.1.1:443 successful. Verifies HTTPS traffic is not blocked.',
+  'check.tcp_443.fix.0':  'TCP port 443 unreachable',
+  'check.tcp_443.fix.1':  'Possible firewall block',
+  'check.tcp_443.fix.2':  'Check router settings',
+
+  'check.pkt_loss.name':   'Packet loss',
+  'check.pkt_loss.hint':   'Packet loss < 1% over 15 minutes.',
+  'check.pkt_loss.fix.0':  'Unstable connection',
+  'check.pkt_loss.fix.1':  'Check ISP cable',
+  'check.pkt_loss.fix.2':  'Contact your ISP',
+
+  'check.jitter.name':   'Jitter (stability)',
+  'check.jitter.hint':   'RTT instability to internet < 10ms.',
+  'check.jitter.fix.0':  'Unstable internet',
+  'check.jitter.fix.1':  'Check ISP line quality',
+  'check.jitter.fix.2':  'See: mtr 8.8.8.8',
+
+  'check.no_blackhole.name':   'No black hole',
+  'check.no_blackhole.hint':   'No 3+ consecutive missing hops in traceroute.',
+  'check.no_blackhole.fix.0':  'Black hole detected in network',
+  'check.no_blackhole.fix.1':  'Possible ICMP filtering by ISP',
+  'check.no_blackhole.fix.2':  'Check traceroute manually',
+
+  // ── Checks — Layer 5 ─────────────────────────────────────
+  'check.dns_gw.name':   'Router DNS resolves',
+  'check.dns_gw.hint':   'Router DNS server returns correct answers.',
+  'check.dns_gw.fix.0':  'Router DNS broken',
+  'check.dns_gw.fix.1':  'Reboot router',
+  'check.dns_gw.fix.2':  'Temporarily change DNS to 8.8.8.8',
+
+  'check.dns_8888.name':   'DNS 8.8.8.8',
+  'check.dns_8888.hint':   'Google Public DNS responds correctly.',
+  'check.dns_8888.fix.0':  'DNS 8.8.8.8 unreachable',
+  'check.dns_8888.fix.1':  'Internet issue or blocked',
+
+  'check.dns_1111.name':   'DNS 1.1.1.1',
+  'check.dns_1111.hint':   'Cloudflare DNS responds correctly.',
+  'check.dns_1111.fix.0':  'DNS 1.1.1.1 unreachable',
+  'check.dns_1111.fix.1':  'Internet issue or blocked',
+
+  'check.dns_latency.name':   'DNS latency',
+  'check.dns_latency.hint':   'DNS query latency < 100ms.',
+  'check.dns_latency.fix.0':  'High DNS latency',
+  'check.dns_latency.fix.1':  'Use a faster DNS server',
+  'check.dns_latency.fix.2':  'Check network load',
+
+  'check.dns_consistency.name':   'DNS consistency',
+  'check.dns_consistency.hint':   'All DNS servers return the same answers.',
+  'check.dns_consistency.fix.0':  'DNS servers return different answers',
+  'check.dns_consistency.fix.1':  'Possible DNS hijacking or cache issue',
+  'check.dns_consistency.fix.2':  'Check router DNS settings',
+
+  'check.nxdomain.name':   'NXDOMAIN correct',
+  'check.nxdomain.hint':   'DNS returns NXDOMAIN for non-existent domains.',
+  'check.nxdomain.fix.0':  'DNS not returning NXDOMAIN',
+  'check.nxdomain.fix.1':  'Router or ISP intercepting DNS requests',
+  'check.nxdomain.fix.2':  'Use DNS over HTTPS',
+
+  'check.dns_hijack.name':   'DNS not hijacked',
+  'check.dns_hijack.hint':   'No DNS hijacking — responses are not being substituted.',
+  'check.dns_hijack.fix.0':  'DNS hijacking detected',
+  'check.dns_hijack.fix.1':  'DNS requests are being intercepted',
+  'check.dns_hijack.fix.2':  'Use DNS-over-HTTPS or VPN',
+
+  'check.doh.name':   'DNS over HTTPS',
+  'check.doh.hint':   'DoH via cloudflare-dns.com works.',
+  'check.doh.fix.0':  'DoH unavailable',
+  'check.doh.fix.1':  'HTTPS to cloudflare-dns.com is blocked',
+  'check.doh.fix.2':  'Check firewall and blocks',
+
+  // ── Checks — Layer 6 ─────────────────────────────────────
+  'check.http_google.name':   'HTTP google.com',
+  'check.http_google.hint':   'HTTPS to google.com — response 200, < 2s.',
+  'check.http_google.fix.0':  'google.com unreachable',
+  'check.http_google.fix.1':  'Check internet and DNS',
+  'check.http_google.fix.2':  'Possible block',
+
+  'check.http_cf.name':   'HTTP cloudflare.com',
+  'check.http_cf.hint':   'HTTPS to cloudflare.com — response 200.',
+  'check.http_cf.fix.0':  'cloudflare.com unreachable',
+  'check.http_cf.fix.1':  'Check internet connection',
+
+  'check.http_github.name':   'HTTP github.com',
+  'check.http_github.hint':   'HTTPS to github.com — response 200.',
+  'check.http_github.fix.0':  'github.com unreachable',
+  'check.http_github.fix.1':  'Check internet connection',
+
+  'check.http_redirect.name':   'HTTP redirect → HTTPS',
+  'check.http_redirect.hint':   'HTTP redirects to HTTPS. If not — possible traffic interception.',
+  'check.http_redirect.fix.0':  'HTTP traffic intercepted',
+  'check.http_redirect.fix.1':  'Possible captive portal or proxy',
+  'check.http_redirect.fix.2':  'Check network settings',
+
+  'check.http_ipv6.name': 'IPv6 HTTP',
+  'check.http_ipv6.hint': 'HTTPS over IPv6 (if available).',
+
+  'check.speedtest.name': 'Speedtest',
+  'check.speedtest.hint': 'Download/upload speed.',
+
+  'check.captive_portal.name':   'Captive portal',
+  'check.captive_portal.hint':   'No captive portal — network is open.',
+  'check.captive_portal.fix.0':  'Captive portal detected',
+  'check.captive_portal.fix.1':  'Open browser and authenticate',
+  'check.captive_portal.fix.2':  'Check for proxy server',
+
+  // ── Checks — Layer 7 ─────────────────────────────────────
+  'check.ssl.name':   'SSL certificates',
+  'check.ssl.hint':   'All SSL certificates valid for > 30 days.',
+  'check.ssl.fix.0':  'SSL certificate expiring',
+  'check.ssl.fix.1':  'Renew certificate',
+  'check.ssl.fix.2':  "Check Let's Encrypt auto-renewal",
+
+  'check.tls_ver.name': 'TLS version',
+  'check.tls_ver.hint': 'TLS ≥ 1.2 on all hosts.',
+
+  'check.path_mtu.name':   'Path MTU',
+  'check.path_mtu.hint':   'No packet fragmentation to internet.',
+  'check.path_mtu.fix.0':  'MTU issue',
+  'check.path_mtu.fix.1':  'Reduce MTU to 1492 (PPPoE) or 1480 (tunnel)',
+  'check.path_mtu.fix.2':  'Check router settings',
+
+  'check.ipv6_global.name':   'IPv6 global',
+  'check.ipv6_global.hint':   'Global IPv6 connectivity works.',
+  'check.ipv6_global.fix.0':  'IPv6 unavailable',
+  'check.ipv6_global.fix.1':  'Check ISP IPv6 support',
+  'check.ipv6_global.fix.2':  'Set up IPv6 tunnel (6in4)',
+
+  'check.ntp.name':   'NTP sync',
+  'check.ntp.hint':   'System time is synchronized — drift < 5s.',
+  'check.ntp.fix.0':  'NTP not synced',
+  'check.ntp.fix.1':  'Check: systemctl status systemd-timesyncd',
+  'check.ntp.fix.2':  'Or: ntpdate pool.ntp.org',
+
+  'check.ip_stable.name':   'IP stable',
+  'check.ip_stable.hint':   'Public IP has been stable for the last 24 hours.',
+  'check.ip_stable.fix.0':  'Public IP changed',
+  'check.ip_stable.fix.1':  'Dynamic IP — normal for home network',
+  'check.ip_stable.fix.2':  'Consider DDNS if stable address needed',
+
+  'check.route_stable_sec.name':   'Routing stable',
+  'check.route_stable_sec.hint':   'Traceroute path has not changed.',
+  'check.route_stable_sec.fix.0':  'Route changed',
+  'check.route_stable_sec.fix.1':  'Possible ISP maintenance',
+
+  'check.os_resolver.name':   'OS resolver',
+  'check.os_resolver.hint':   '/etc/resolv.conf contains nameserver.',
+  'check.os_resolver.fix.0':  '/etc/resolv.conf empty or missing',
+  'check.os_resolver.fix.1':  'Add: nameserver 8.8.8.8',
+  'check.os_resolver.fix.2':  'Check system network settings',
+
+  'check.dns_leak.name':   'DNS leak',
+  'check.dns_leak.hint':   'DNS requests not leaking through foreign servers.',
+  'check.dns_leak.fix.0':  'DNS leak detected',
+  'check.dns_leak.fix.1':  'DNS requests going through unexpected server',
+  'check.dns_leak.fix.2':  'Use VPN with DNS leak protection',
+
+  'check.iface_anomaly.name':   'Interface anomalies',
+  'check.iface_anomaly.hint':   'No sudden spike in errors/drops.',
+  'check.iface_anomaly.fix.0':  'Interface statistics anomaly',
+  'check.iface_anomaly.fix.1':  'Check physical connection',
+  'check.iface_anomaly.fix.2':  'See: ip -s link show',
+
+  // ── Diagnostic rules ─────────────────────────────────────
+  'diag.R1.title':   'Complete network outage',
+  'diag.R1.desc':    'No connection to router or internet',
+  'diag.R1.step.0':  'Check router power cable',
+  'diag.R1.step.1':  'Check cable between server and router',
+  'diag.R1.step.2':  'Reboot router',
+  'diag.R1.step.3':  'Check interface status: ip link show',
+
+  'diag.R2.title':   'Router unreachable',
+  'diag.R2.desc':    'Interface up but router not responding to ping and ARP',
+  'diag.R2.step.0':  'Check cable between server and router',
+  'diag.R2.step.1':  'Make sure router is on',
+  'diag.R2.step.2':  'Try: arp -n',
+  'diag.R2.step.3':  'Reboot router',
+
+  'diag.R3.title':   'No internet — ISP issue',
+  'diag.R3.desc':    'Router accessible but no internet',
+  'diag.R3.step.0':  'Call your ISP',
+  'diag.R3.step.1':  'Check ISP equipment status',
+  'diag.R3.step.2':  'Try rebooting router',
+  'diag.R3.step.3':  'Check account balance',
+
+  'diag.R4.title':   'DNS broken, IP connectivity works',
+  'diag.R4.desc':    'Ping and TCP work but all DNS servers not responding',
+  'diag.R4.step.0':  "Temporarily change DNS: echo 'nameserver 8.8.8.8' > /etc/resolv.conf",
+  'diag.R4.step.1':  'Reboot router',
+  'diag.R4.step.2':  'Check DNS settings on router',
+
+  'diag.R5.title':   'Router DNS broken, external DNS works',
+  'diag.R5.desc':    'Router DNS not responding, 8.8.8.8 works',
+  'diag.R5.step.0':  'Reboot router',
+  'diag.R5.step.1':  'Change router DNS to 8.8.8.8',
+  'diag.R5.step.2':  'Temporarily use external DNS',
+
+  'diag.R6.title':   'DNS hijacking — requests intercepted',
+  'diag.R6.desc':    'DNS requests intercepted or NXDOMAIN not working',
+  'diag.R6.step.0':  'Use DNS-over-HTTPS',
+  'diag.R6.step.1':  'Enable DoH in browser',
+  'diag.R6.step.2':  'Consider using VPN',
+  'diag.R6.step.3':  'Check router settings',
+
+  'diag.R7.title':   'Unstable connection — packet loss',
+  'diag.R7.desc':    'Packet loss > 5% over last 15 minutes',
+  'diag.R7.step.0':  'Check ISP cable',
+  'diag.R7.step.1':  'Contact your ISP',
+  'diag.R7.step.2':  'Check WiFi signal quality',
+  'diag.R7.step.3':  'See: mtr 8.8.8.8',
+
+  'diag.R8.title':   'MTU issue — fragmentation',
+  'diag.R8.desc':    'Packet fragmentation detected',
+  'diag.R8.step.0':  'Reduce MTU to 1492 (PPPoE)',
+  'diag.R8.step.1':  'Reduce MTU to 1480 (tunnel)',
+  'diag.R8.step.2':  'Check MTU settings on router',
+  'diag.R8.step.3':  'Command: ip link set eth0 mtu 1492',
+
+  'diag.R9.title':   'CGNAT — behind ISP NAT',
+  'diag.R9.desc':    'Your public IP belongs to ISP (100.64.0.0/10)',
+  'diag.R9.step.0':  "Port forwarding won't work",
+  'diag.R9.step.1':  'Request dedicated IP from ISP',
+  'diag.R9.step.2':  'Consider VPN with port forwarding',
+
+  'diag.R10.title':   'HTTP blocked',
+  'diag.R10.desc':    'Ping and DNS work but HTTP/HTTPS blocked',
+  'diag.R10.step.0':  'Check firewall settings',
+  'diag.R10.step.1':  'Try another browser',
+  'diag.R10.step.2':  'Possible ISP block',
+  'diag.R10.step.3':  'Consider using VPN',
+
+  'diag.R11.title':   'IPv6 not working',
+  'diag.R11.desc':    'IPv4 works, IPv6 unavailable',
+  'diag.R11.step.0':  'Check ISP IPv6 support',
+  'diag.R11.step.1':  'Set up IPv6 tunnel (Hurricane Electric)',
+  'diag.R11.step.2':  'Or ignore — IPv4 is sufficient',
+
+  'diag.R12.title':   'High ISP latency',
+  'diag.R12.desc':    'Gateway nearby but first ISP hop is far',
+  'diag.R12.step.0':  'Contact your ISP',
+  'diag.R12.step.1':  'Check line quality',
+  'diag.R12.step.2':  'Request diagnostics from ISP',
 };
 
 export default en;
