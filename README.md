@@ -114,6 +114,11 @@ bun test              # run all tests
 
 Backend dev server runs on port `3001`; the frontend Vite dev server proxies `/api` and `/ws` there.
 
+## Contributing
+
+Contributions are welcome — bug reports, feature requests, and pull requests.
+Open an issue to start a discussion.
+
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE)
