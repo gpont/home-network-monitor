@@ -1,6 +1,7 @@
 {
   "name": "home-network-monitor",
   "private": true,
+  "author": "Evgenii Guzhikhin",
   "type": "module",
   "scripts": {
     "dev": "concurrently -n backend,frontend -c cyan,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
