@@ -49,18 +49,18 @@
 ## T13 — Frontend types
 > После: T12 · Блокирует: Batch 3
 
-- [ ] **T13** — lib/types.ts по форме /api/status · [plans/13-types-logic.md](plans/13-types-logic.md#t13)
+- [x] **T13** — lib/types.ts по форме /api/status · [plans/13-types-logic.md](plans/13-types-logic.md#t13) — 9 новых интерфейсов, CheckDefinition/DiagnosticRule/LayerDefinition, расширен StatusResponse
 
 ---
 
 ## Batch 3 — Frontend (параллельно после T13)
 
-- [ ] **T14** — lib/checks.ts: 53 определения · [plans/13-types-logic.md](plans/13-types-logic.md#t14)
-- [ ] **T15** — lib/diagnostics.ts: 12 правил · [plans/13-types-logic.md](plans/13-types-logic.md#t15) *(после T14)*
-- [ ] **T16** — CheckRow.svelte · [plans/16-checkrow.md](plans/16-checkrow.md)
+- [x] **T14** — lib/checks.ts: 53 определения · [plans/13-types-logic.md](plans/13-types-logic.md#t14) — 53 чека по 7 слоям, все 10 тестов зелёные
+- [x] **T15** — lib/diagnostics.ts: 12 правил · [plans/13-types-logic.md](plans/13-types-logic.md#t15) — 12 правил (R1-R12), 3 critical/7 warning/2 info, все 8 тестов зелёные
+- [x] **T16** — CheckRow.svelte · [plans/16-checkrow.md](plans/16-checkrow.md) — иконка статуса + name + description + fix-блок при fail
 - [ ] **T17** — LayerCard.svelte · [plans/17-layercard.md](plans/17-layercard.md) *(после T16)*
-- [ ] **T18** — DiagBanner.svelte · [plans/18-diagbanner.md](plans/18-diagbanner.md)
-- [ ] **T19** — PathChain.svelte · [plans/19-pathchain.md](plans/19-pathchain.md)
+- [x] **T18** — DiagBanner.svelte · [plans/18-diagbanner.md](plans/18-diagbanner.md) — severity icon + title + description + пронумерованные шаги
+- [x] **T19** — PathChain.svelte · [plans/19-pathchain.md](plans/19-pathchain.md) — горизонтальная цепочка узлов, зелёный/красный/серый по статусу
 
 ---
 

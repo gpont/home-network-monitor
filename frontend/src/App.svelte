@@ -2,111 +2,61 @@
   import { onMount } from "svelte";
   import { wsConnected, onWsEvent } from "./lib/ws.ts";
   import { api } from "./lib/api.ts";
-  import type {
-    StatusResponse,
-    PingResult,
-    SpeedtestResult,
-    Event,
-  } from "./lib/types.ts";
-
-  import StatusCard from "./components/StatusCard.svelte";
-  import LatencyChart from "./components/LatencyChart.svelte";
-  import PacketLossWidget from "./components/PacketLossWidget.svelte";
-  import SpeedtestWidget from "./components/SpeedtestWidget.svelte";
-  import TracerouteWidget from "./components/TracerouteWidget.svelte";
-  import NetworkHealthWidget from "./components/NetworkHealthWidget.svelte";
-  import EventsLog from "./components/EventsLog.svelte";
+  import { CHECKS, LAYERS } from "./lib/checks.ts";
+  import { evaluate } from "./lib/diagnostics.ts";
+  import PathChain from "./components/PathChain.svelte";
+  import DiagBanner from "./components/DiagBanner.svelte";
+  import LayerCard from "./components/LayerCard.svelte";
+  import type { StatusResponse } from "./lib/types.ts";
 
   let status = $state<StatusResponse | null>(null);
-  let pingHistory = $state<PingResult[]>([]);
-  let pingStats = $state<Record<string, Record<string, { lossPercent: number; avgRtt: number | null; p95Rtt: number | null; jitter: number; samples: number }>> | null>(null);
-  let speedtestHistory = $state<SpeedtestResult[]>([]);
-  let events = $state<Event[]>([]);
   let lastUpdated = $state<number | null>(null);
 
-  // Ping target status helper
-  function pingStatus(target: string): { status: "ok" | "error" | "timeout" | "warning" | "unknown"; rtt: string | null; ts: number | null } {
-    const r = status?.ping.find((p) => p.target === target || p.targetLabel === target);
-    if (!r) return { status: "unknown", rtt: null, ts: null };
-    return {
-      status: r.status === "ok" ? "ok" : r.status === "timeout" ? "timeout" : "error",
-      rtt: r.rttMs != null ? `${r.rttMs.toFixed(1)}ms` : null,
-      ts: r.timestamp,
-    };
+  const activeRules = $derived(status ? evaluate(status) : []);
+
+  const layerStatuses = $derived(LAYERS.map(layer => {
+    const layerChecks = CHECKS.filter(c => c.layer === layer.id);
+    const failCount = status
+      ? layerChecks.filter(c => c.getStatus(status!) === "fail").length
+      : 0;
+    const hasStale = !status || layerChecks.every(c => ["stale", "unknown"].includes(c.getStatus(status!)));
+    return { ...layer, failCount, hasStale };
+  }));
+
+  function isCascade(layerId: number): boolean {
+    if (!status) return false;
+    const ispFails = CHECKS.filter(c => c.layer === 3)
+      .some(c => c.getStatus(status!) === "fail");
+    return ispFails && layerId >= 4;
   }
 
-  function dnsStatus(serverLabel: string) {
-    const r = status?.dns.find((d) => d.serverLabel === serverLabel);
-    if (!r) return { status: "unknown" as const, rtt: null, ts: null };
-    return {
-      status: r.status === "ok" ? "ok" as const : "error" as const,
-      rtt: r.latencyMs != null ? `${r.latencyMs.toFixed(0)}ms` : null,
-      ts: r.timestamp,
-    };
-  }
-
-  function httpStatus(urlPart: string) {
-    const r = status?.http.find((h) => h.url.includes(urlPart));
-    if (!r) return { status: "unknown" as const, rtt: null, ts: null };
-    const ok = r.statusCode !== null && r.statusCode < 400;
-    return {
-      status: (ok ? "ok" : "error") as "ok" | "error",
-      rtt: r.latencyMs != null ? `${r.latencyMs.toFixed(0)}ms` : r.error ?? null,
-      ts: r.timestamp,
-    };
-  }
-
-  async function loadAll() {
-    const [s, ph, ps, sth, ev] = await Promise.allSettled([
-      api.status(),
-      api.pingHistory(60),
-      api.pingStats(),
-      api.speedtest(48),
-      api.events(),
-    ]);
-
-    if (s.status === "fulfilled") status = s.value;
-    if (ph.status === "fulfilled") pingHistory = ph.value;
-    if (ps.status === "fulfilled") pingStats = ps.value;
-    if (sth.status === "fulfilled") speedtestHistory = sth.value;
-    if (ev.status === "fulfilled") events = ev.value;
-    lastUpdated = Date.now();
+  async function loadStatus() {
+    try {
+      status = await api.status();
+      lastUpdated = Date.now();
+    } catch (e) {
+      console.error("Failed to load status", e);
+    }
   }
 
   onMount(() => {
-    loadAll();
-
-    // Refresh status every 10s
-    const interval = setInterval(() => loadAll(), 10_000);
-
-    // Update on WS push
-    const unsub = onWsEvent("*", () => {
-      loadAll();
-    });
-
-    return () => {
-      clearInterval(interval);
-      unsub();
-    };
+    loadStatus();
+    const interval = setInterval(loadStatus, 10_000);
+    const unsub = onWsEvent("*", loadStatus);
+    return () => { clearInterval(interval); unsub(); };
   });
 
-  function timeAgo(ts: number | null): string {
-    if (!ts) return "";
-    const diff = Math.floor((Date.now() - ts) / 1000);
-    if (diff < 5) return "just now";
-    return `${diff}s ago`;
+  function scrollToLayer(layerId: number) {
+    document.getElementById(`layer-${layerId}`)?.scrollIntoView({ behavior: "smooth" });
   }
 </script>
 
 <div class="app">
   <header>
-    <div class="title">
-      <span class="icon">📡</span>
-      Network Monitor
-    </div>
+    <div class="title">📡 Network Monitor</div>
     <div class="header-right">
       {#if lastUpdated}
-        <span class="updated">Updated {timeAgo(lastUpdated)}</span>
+        <span class="updated">Updated {Math.floor((Date.now() - lastUpdated) / 1000)}s ago</span>
       {/if}
       <div class="ws-badge" class:connected={$wsConnected}>
         {$wsConnected ? "Live" : "Reconnecting..."}
@@ -114,85 +64,31 @@
     </div>
   </header>
 
+  <div class="path-section">
+    <PathChain layers={layerStatuses} onNodeClick={scrollToLayer} />
+  </div>
+
+  {#if activeRules.length > 0}
+    <div class="diag-section">
+      {#each activeRules as rule}
+        <DiagBanner {rule} />
+      {/each}
+    </div>
+  {/if}
+
   <main>
-    <!-- ─── Status Overview ─────────────────────────────────────── -->
-    <section>
-      <h2>Connectivity</h2>
-      <div class="cards">
-        {#each status?.ping ?? [] as p}
-          <StatusCard
-            label={p.targetLabel}
-            status={p.status === "ok" ? "ok" : p.status === "timeout" ? "timeout" : "error"}
-            value={p.rttMs != null ? `${p.rttMs.toFixed(1)}ms` : null}
-            updatedAt={p.timestamp}
-          />
-        {/each}
-      </div>
-    </section>
-
-    <section>
-      <h2>DNS</h2>
-      <div class="cards">
-        {#each status?.dns ?? [] as d}
-          <StatusCard
-            label={d.serverLabel}
-            status={d.status === "ok" ? "ok" : "error"}
-            value={d.latencyMs != null ? `${d.latencyMs.toFixed(0)}ms` : d.status}
-            sub={d.domain}
-            updatedAt={d.timestamp}
-          />
-        {/each}
-      </div>
-    </section>
-
-    <section>
-      <h2>HTTP</h2>
-      <div class="cards">
-        {#each status?.http ?? [] as h}
-          {@const ok = h.statusCode !== null && h.statusCode < 400}
-          <StatusCard
-            label={h.url.replace("https://www.", "").replace("https://", "")}
-            status={ok ? "ok" : "error"}
-            value={h.latencyMs != null ? `${h.latencyMs.toFixed(0)}ms` : (h.error ?? "error")}
-            sub={h.statusCode != null ? `HTTP ${h.statusCode}` : null}
-            updatedAt={h.timestamp}
-          />
-        {/each}
-      </div>
-    </section>
-
-    <!-- ─── Charts ──────────────────────────────────────────────── -->
-    <section>
-      <h2>Connection Quality</h2>
-      <div class="charts-grid">
-        <LatencyChart data={pingHistory} title="Latency (last 60 min)" />
-        <PacketLossWidget stats={pingStats} />
-      </div>
-    </section>
-
-    <!-- ─── Traceroute + Speed ──────────────────────────────────── -->
-    <section>
-      <div class="two-col">
-        <TracerouteWidget latest={status?.traceroute ?? null} />
-        <SpeedtestWidget latest={status?.speedtest ?? null} history={speedtestHistory} />
-      </div>
-    </section>
-
-    <!-- ─── Network Health + Events ────────────────────────────── -->
-    <section>
-      <div class="two-col">
-        <NetworkHealthWidget
-          publicIp={status?.publicIp ?? null}
-          cgnat={status?.cgnat ?? null}
-          mtu={status?.mtu ?? null}
-          ipv6={status?.ipv6 ?? null}
-          dhcp={status?.dhcp ?? null}
-          ssl={status?.ssl ?? []}
-          networkStats={status?.networkStats ?? []}
+    {#if status}
+      {#each LAYERS as layer}
+        <LayerCard
+          {layer}
+          checks={CHECKS.filter(c => c.layer === layer.id)}
+          status={status}
+          isCascade={isCascade(layer.id)}
         />
-        <EventsLog {events} />
-      </div>
-    </section>
+      {/each}
+    {:else}
+      <div class="loading">Loading...</div>
+    {/if}
   </main>
 </div>
 
@@ -241,12 +137,7 @@
     font-size: 16px;
     font-weight: 700;
     color: #f1f5f9;
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
-
-  .icon { font-size: 20px; }
 
   .header-right {
     display: flex;
@@ -270,49 +161,39 @@
     color: #22c55e;
   }
 
-  main {
-    flex: 1;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
+  .path-section {
+    padding: 8px 24px 0;
     max-width: 1400px;
     width: 100%;
     margin: 0 auto;
   }
 
-  section h2 {
-    font-size: 12px;
-    font-weight: 600;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 12px;
+  .diag-section {
+    padding: 8px 24px;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
   }
 
-  .cards {
+  main {
+    flex: 1;
+    padding: 16px 24px 24px;
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-direction: column;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
   }
 
-  .charts-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 16px;
-  }
-
-  .two-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
+  .loading {
+    color: #64748b;
+    font-size: 14px;
+    padding: 32px;
+    text-align: center;
   }
 
   @media (max-width: 900px) {
-    .charts-grid, .two-col {
-      grid-template-columns: 1fr;
-    }
-
-    main { padding: 16px; }
+    main { padding: 12px 16px 16px; }
+    .path-section, .diag-section { padding-left: 16px; padding-right: 16px; }
   }
 </style>
