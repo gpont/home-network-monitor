@@ -58,7 +58,7 @@
 - [x] **T14** — lib/checks.ts: 53 определения · [plans/13-types-logic.md](plans/13-types-logic.md#t14) — 53 чека по 7 слоям, все 10 тестов зелёные
 - [x] **T15** — lib/diagnostics.ts: 12 правил · [plans/13-types-logic.md](plans/13-types-logic.md#t15) — 12 правил (R1-R12), 3 critical/7 warning/2 info, все 8 тестов зелёные
 - [x] **T16** — CheckRow.svelte · [plans/16-checkrow.md](plans/16-checkrow.md) — иконка статуса + name + description + fix-блок при fail
-- [ ] **T17** — LayerCard.svelte · [plans/17-layercard.md](plans/17-layercard.md) *(после T16)*
+- [x] **T17** — LayerCard.svelte · [plans/17-layercard.md](plans/17-layercard.md) — цветная левая рамка + бейдж ok/fail + список CheckRow + каскадное предупреждение
 - [x] **T18** — DiagBanner.svelte · [plans/18-diagbanner.md](plans/18-diagbanner.md) — severity icon + title + description + пронумерованные шаги
 - [x] **T19** — PathChain.svelte · [plans/19-pathchain.md](plans/19-pathchain.md) — горизонтальная цепочка узлов, зелёный/красный/серый по статусу
 
@@ -67,7 +67,7 @@
 ## T20 — App.svelte
 > После: T14, T15, T16, T17, T18, T19
 
-- [ ] **T20** — App.svelte полный рерайт · [plans/20-app.md](plans/20-app.md)
+- [x] **T20** — App.svelte полный рерайт · [plans/20-app.md](plans/20-app.md) — PathChain + DiagBanner + LayerCard, удалены 7 старых компонентов, 56 тестов зелёных
 
 ---
 
