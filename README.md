@@ -12,7 +12,7 @@ with 53 checks, automatic problem diagnosis, and fix instructions.
 [![built with Bun](https://img.shields.io/badge/built_with-Bun-fbf0df?logo=bun)]()
 [![Svelte 5](https://img.shields.io/badge/Svelte-5-ff3e00?logo=svelte&logoColor=white)]()
 
-![Dashboard screenshot](docs/screenshot.png)
+<!-- ![Dashboard screenshot](docs/screenshot.png) -->
 
 ## Features
 
