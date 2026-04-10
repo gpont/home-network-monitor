@@ -1,5 +1,5 @@
 import { db } from "../db/client.ts";
-import { dnsResults } from "../db/schema.ts";
+import { dnsResults, dnsExtraChecks } from "../db/schema.ts";
 import { spawn, now } from "./utils.ts";
 
 export interface DnsServer {
@@ -95,4 +95,78 @@ export async function runDnsChecks(
   );
 
   return results;
+}
+
+export interface DnsAnswerResult {
+  status: "ok" | "timeout" | "servfail" | "error";
+  answer: string | null;
+}
+
+export function checkDnsConsistency(results: DnsAnswerResult[]): "ok" | "mismatch" | "unknown" {
+  const okResults = results.filter(r => r.status === "ok" && r.answer !== null);
+  if (okResults.length === 0) return "unknown";
+  const answers = new Set(okResults.map(r => r.answer));
+  return answers.size === 1 ? "ok" : "mismatch";
+}
+
+export function checkNxdomain(digOutput: string): "ok" | "fail" {
+  return digOutput.includes("NXDOMAIN") ? "ok" : "fail";
+}
+
+export function checkHijacking(answer: string | null): "ok" | "hijacked" | "unknown" {
+  if (!answer) return "unknown";
+  return answer === "1.1.1.1" ? "ok" : "hijacked";
+}
+
+async function queryDns(server: string, domain: string): Promise<string | null> {
+  const result = await spawn(["dig", "+short", "+time=3", "+tries=1", `@${server}`, domain, "A"], 5000);
+  const lines = result.stdout.trim().split("\n").filter(l => /^\d+\.\d+\.\d+\.\d+$/.test(l));
+  return lines[0] ?? null;
+}
+
+async function checkDoH(): Promise<"ok" | "fail" | "unknown"> {
+  try {
+    const res = await fetch("https://cloudflare-dns.com/dns-query?name=one.one.one.one&type=A", {
+      headers: { Accept: "application/dns-json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return "fail";
+    const json = await res.json() as { Answer?: Array<{ data: string }> };
+    return json.Answer && json.Answer.length > 0 ? "ok" : "fail";
+  } catch {
+    return "unknown";
+  }
+}
+
+export async function checkDnsExtras(servers: Array<{ ip: string; label: string }>) {
+  const timestamp = Date.now();
+
+  // Query one.one.one.one from all resolvers
+  const answers = await Promise.all(
+    servers.map(async s => {
+      const answer = await queryDns(s.ip, "one.one.one.one").catch(() => null);
+      return { status: answer ? "ok" as const : "timeout" as const, answer };
+    })
+  );
+
+  const consistency = checkDnsConsistency(answers);
+  const hijacking = checkHijacking(answers[0]?.answer ?? null);
+
+  // NXDOMAIN check
+  const randomDomain = `nxcheck-${Date.now()}.invalid`;
+  const nxOut = await spawn(["dig", "+time=3", "+tries=1", "@8.8.8.8", randomDomain, "A"], 5000).catch(() => ({ stdout: "" }));
+  const nxdomain = checkNxdomain(nxOut.stdout);
+
+  const doh = await checkDoH();
+
+  await db.insert(dnsExtraChecks).values({
+    consistency,
+    nxdomain,
+    hijacking,
+    doh,
+    dnsLeak: "unknown",
+    timestamp,
+  });
+
+  return { consistency, nxdomain, hijacking, doh, dnsLeak: "unknown", timestamp };
 }
