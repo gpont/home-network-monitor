@@ -37,15 +37,24 @@ export function parseIfconfigOutput(out: string): {
   ipv4: string | null;
   ipv6LinkLocal: string | null;
 } {
-  const ifaceMatch = out.match(/^(\w+\d[\w.]*):.*flags=\S+<([^>]+)>/m);
+  // Find first physical (non-loopback, non-virtual) UP interface
+  const ifaceMatch = out.match(/^(en\d+|eth\d+|wlan\d+):.*flags=\S+<([^>]+)>/m);
   if (!ifaceMatch) return { name: "unknown", status: "unknown", ipv4: null, ipv6LinkLocal: null };
 
   const name = ifaceMatch[1] ?? "unknown";
   const flags = ifaceMatch[2] ?? "";
   const status: "up" | "down" | "unknown" = flags.includes("UP") ? "up" : "down";
 
-  const v4 = out.match(/\binet\s+(\d+\.\d+\.\d+\.\d+)/);
-  const v6 = out.match(/\binet6\s+(fe80:[^\s%/]+)/i);
+  // Only parse addresses from the matched interface's section (until the next interface header)
+  const sectionStart = ifaceMatch.index ?? 0;
+  const afterHeader = sectionStart + ifaceMatch[0].length;
+  const nextIfaceMatch = out.slice(afterHeader).match(/^(en\d+|eth\d+|wlan\d+|\w+\d[\w.]*):/m);
+  const section = nextIfaceMatch?.index != null
+    ? out.slice(sectionStart, afterHeader + nextIfaceMatch.index)
+    : out.slice(sectionStart);
+
+  const v4 = section.match(/\binet\s+(\d+\.\d+\.\d+\.\d+)/);
+  const v6 = section.match(/\binet6\s+(fe80:[^\s%/]+)/i);
 
   return {
     name,
@@ -75,7 +84,7 @@ export function parseNetstatIfaceStats(
   ifname: string,
   out: string
 ): { rxErrors: number; txErrors: number; rxDropped: number; txDropped: number } {
-  const line = out.split("\n").find(l => l.trim().startsWith(ifname));
+  const line = out.split("\n").find(l => l.trim().startsWith(ifname) && l.includes("<Link#"));
   if (!line) return { rxErrors: 0, txErrors: 0, rxDropped: 0, txDropped: 0 };
   const parts = line.trim().split(/\s+/);
   // Columns (0-indexed): 0=Name 1=Mtu 2=Network 3=Address 4=Ipkts 5=Ierrs 6=Ibytes 7=Opkts 8=Oerrs
@@ -155,10 +164,11 @@ async function checkInterfaceLinux(timestamp: number) {
 }
 
 async function checkInterfaceMacOs(timestamp: number) {
-  const ifconfigOut = await spawn(["ifconfig", "-a"], 3000);
+  const [ifconfigOut, routeOut] = await Promise.all([
+    spawn(["ifconfig", "-a"], 3000),
+    spawn(["netstat", "-rn"], 3000),
+  ]);
   const parsed = parseIfconfigOutput(ifconfigOut.stdout);
-
-  const routeOut = await spawn(["netstat", "-rn"], 3000);
   const route = parseNetstatRouteOutput(routeOut.stdout);
 
   let gatewayMac: string | null = null;

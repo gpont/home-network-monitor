@@ -72,6 +72,16 @@ describe("parseIfconfigOutput (macOS)", () => {
   test("returns unknown for empty output", () => {
     expect(parseIfconfigOutput("").status).toBe("unknown");
   });
+
+  test("skips loopback lo0 and returns physical interface", () => {
+    const out = `lo0: flags=8049<UP,LOOPBACK,RUNNING> mtu 16384
+\tinet 127.0.0.1 netmask 0xff000000
+en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+\tinet 192.168.1.5 netmask 0xffffff00 broadcast 192.168.1.255`;
+    const result = parseIfconfigOutput(out);
+    expect(result.name).toBe("en0");
+    expect(result.ipv4).toBe("192.168.1.5");
+  });
 });
 
 describe("parseNetstatRouteOutput (macOS)", () => {
