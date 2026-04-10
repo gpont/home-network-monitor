@@ -1,77 +1,76 @@
-# Home Network Monitor
+# home-network-monitor
 
-Веб-дашборд для мониторинга домашней сети. Запускается в Docker на домашнем сервере.
+Network diagnostic dashboard for your home server.
+Shows the full packet path (Device → Router → ISP → Internet → DNS → HTTP → Security)
+with 53 checks, automatic problem diagnosis, and fix instructions.
 
-**Что мониторит:**
-- Ping до роутера, первого хопа провайдера, Google/Cloudflare/Quad9
-- DNS-разрешение через локальный, 8.8.8.8 и 1.1.1.1
-- HTTP-доступность google.com, cloudflare.com, github.com
-- Latency, jitter, packet loss за окна 5/15/60 мин
-- Traceroute до 8.8.8.8, детектирует смену маршрута
-- Speedtest раз в час
-- Публичный IP (IPv4/IPv6), смена IP как событие
-- CGNAT, MTU-проблемы, IPv6-связность
-- SSL-сертификаты указанных хостов
-- RX/TX ошибки сетевых интерфейсов (`/proc/net/dev`)
-- DHCP lease / PPPoE-сессия
+<!-- Screenshot placeholder -->
+<!-- ![Dashboard screenshot](docs/screenshot.png) -->
 
-## Запуск на сервере (Docker)
+## Features
+
+- 53 network checks across 7 layers (Device/Interface, Gateway, ISP/WAN, Internet, DNS, HTTP, Security)
+- Automatic diagnosis: detects ISP outages, DNS failures, packet loss, MTU issues, CGNAT, captive portals, and more
+- Fix instructions for every failed check
+- Real-time updates via WebSocket
+- Latency history, jitter, packet loss statistics
+- Speedtest (download/upload), public IP change detection, SSL certificate monitoring
+- No cloud, no account — runs entirely on your home server
+
+## Requirements
+
+- Linux server (x86_64)
+- Docker + Docker Compose
+
+## Quick Start
 
 ```bash
-git clone <repo> home-network-monitor
+git clone https://github.com/gpont/home-network-monitor
 cd home-network-monitor
-
-# Опционально: настроить переменные
 cp .env.example .env
-
-docker-compose up --build -d
+docker-compose up -d
 ```
 
-Открыть `http://<server-ip>:3000`.
+Open `http://your-server-ip:3000`
 
-### Переменные окружения (`.env`)
+## Configuration
 
-| Переменная | По умолчанию | Описание |
+| Variable | Default | Description |
 |---|---|---|
-| `PORT` | `3000` | Порт |
-| `DB_PATH` | `/app/data/monitor.db` | Путь к SQLite |
-| `SSL_HOSTS` | `google.com,cloudflare.com,github.com` | Хосты для проверки SSL |
-| `IPERF3_SERVER` | — | IP iperf3-сервера для тестов пропускной способности |
+| `PORT` | `3000` | HTTP port the dashboard listens on |
+| `DB_PATH` | `/app/data/monitor.db` | Path to the SQLite database inside the container |
+| `SSL_HOSTS` | `google.com,cloudflare.com,github.com` | Comma-separated hostnames for SSL certificate checks |
+| `IPERF3_SERVER` | — | IP of an iperf3 server for throughput testing (optional) |
 
-Данные хранятся в `./data/` — при перезапуске контейнера история не теряется.
+Data is stored in `./data/` on the host — history is preserved across container restarts.
 
-## Разработка локально
+## Docker image
 
-### Требования
-- [Bun](https://bun.sh) — `curl -fsSL https://bun.sh/install | bash`
-- Node.js 20+
+```
+ghcr.io/gpont/home-network-monitor:latest
+```
+
+The container requires `network_mode: host` and `cap_add: NET_RAW` (for ICMP ping).
+Both are pre-configured in `docker-compose.yml`.
+
+## Development
+
+Requirements: [Bun](https://bun.sh)
 
 ```bash
-npm install          # установить все зависимости
+npm install           # install all dependencies
 
-npm run dev          # запустить backend + frontend одновременно
-npm run dev:backend  # только backend  → http://localhost:3001
-npm run dev:frontend # только frontend → http://localhost:5173
+npm run dev           # start backend + frontend simultaneously
+npm run dev:backend   # backend only  → http://localhost:3001
+npm run dev:frontend  # frontend only → http://localhost:5173
 
-npm run build        # собрать фронтенд в backend/public/
-npm run typecheck    # TypeScript проверка backend
+npm run build         # build frontend into backend/public/
+npm run typecheck     # TypeScript check
+bun test              # run all tests
 ```
 
-Backend dev запускается на порту `3001`, frontend проксирует `/api` и `/ws` туда.
+Backend dev server runs on port `3001`; the frontend Vite dev server proxies `/api` and `/ws` there.
 
-## Структура
+## License
 
-```
-backend/src/
-  index.ts       — HTTP + WebSocket сервер (Hono)
-  config.ts      — все таргеты и интервалы
-  scheduler.ts   — запуск чекеров по расписанию
-  db/            — Drizzle ORM + SQLite-схема
-  checkers/      — ping, dns, http, traceroute, speedtest, publicip, misc
-  routes/api.ts  — REST API
-
-frontend/src/
-  App.svelte     — дашборд
-  lib/           — API-клиент, WebSocket-стор, типы
-  components/    — карточки статуса, графики, виджеты
-```
+MIT
