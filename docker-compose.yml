@@ -22,7 +22,8 @@ services:
     cap_add:
       - NET_RAW       # Required for ICMP ping
       - NET_ADMIN     # Required for some network operations
-    network_mode: host  # Better for detecting gateway, traceroute, etc.
+    # network_mode: host  # Linux only: better for gateway/traceroute detection.
+    # On macOS Docker Desktop use bridge (default) with port mapping above.
     restart: unless-stopped
     logging:
       driver: "json-file"
