@@ -1,5 +1,5 @@
 // frontend/src/lib/i18n/index.ts
-import { writable, derived, type Readable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import ru from './ru.ts';
 import en from './en.ts';
 
@@ -26,7 +26,7 @@ locale.subscribe(l => {
 
 const dicts: Record<Locale, Record<string, string>> = { ru, en };
 
-export const t: Readable<(key: string, vars?: Record<string, string | number>) => string> = derived(locale, $locale =>
+export const t = derived(locale, $locale =>
   (key: string, vars?: Record<string, string | number>): string => {
     let text = dicts[$locale][key] ?? dicts['ru'][key] ?? key;
     if (vars) {

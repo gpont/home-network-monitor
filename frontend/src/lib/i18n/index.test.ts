@@ -10,7 +10,7 @@ const mockStore: Record<string, string> = {};
 
 import { describe, test, expect, beforeEach } from 'bun:test';
 import { get } from 'svelte/store';
-import { locale, t, detectLocale } from './index';
+import { locale, t, detectLocale } from './index.ts';
 
 describe('detectLocale', () => {
   beforeEach(() => {
@@ -37,25 +37,27 @@ describe('detectLocale', () => {
   });
 });
 
+type Translator = (key: string, vars?: Record<string, string | number>) => string;
+
 describe('t()', () => {
   test('returns Russian text when locale is ru', () => {
     locale.set('ru');
-    expect(get(t)('ui.loading')).toBe('Загрузка...');
+    expect((get(t) as Translator)('ui.loading')).toBe('Загрузка...');
   });
 
   test('returns English text when locale is en', () => {
     locale.set('en');
-    expect(get(t)('ui.loading')).toBe('Loading...');
+    expect((get(t) as Translator)('ui.loading')).toBe('Loading...');
   });
 
   test('falls back to raw key when not found in any dict', () => {
     locale.set('en');
-    expect(get(t)('nonexistent.key.xyz')).toBe('nonexistent.key.xyz');
+    expect((get(t) as Translator)('nonexistent.key.xyz')).toBe('nonexistent.key.xyz');
   });
 
   test('interpolates {n} variables', () => {
     locale.set('en');
-    expect(get(t)('ui.updated', { n: 42 })).toBe('Updated 42s ago');
+    expect((get(t) as Translator)('ui.updated', { n: 42 })).toBe('Updated 42s ago');
   });
 
   test('persists locale change to localStorage', () => {

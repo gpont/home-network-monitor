@@ -5,7 +5,14 @@
       "Bash(docker-compose up:*)",
       "Bash(curl -v http://localhost:3201/api/status)",
       "Bash(git tag:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(ls /Users/gpont/Projects/home-network-monitor/*.md)",
+      "Bash(/Users/gpont/.claude/plugins/cache/superpowers-marketplace/superpowers/5.0.5/scripts/start-server.sh --project-dir /Users/gpont/Projects/home-network-monitor)",
+      "WebFetch(domain:localhost)",
+      "Bash(curl -s http://localhost:3000/api/status)",
+      "Bash(curl -s http://localhost:3000/api/checks)",
+      "Bash(~/.bun/bin/bun x:*)",
+      "Bash(tsc --noEmit -p frontend/tsconfig.json)"
     ]
   }
 }
