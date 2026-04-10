@@ -95,6 +95,67 @@ export function initDb() {
       timestamp INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS interface_checks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      interface_name TEXT NOT NULL,
+      status TEXT NOT NULL,
+      ipv4 TEXT,
+      ipv6_link_local TEXT,
+      gateway_ip TEXT,
+      gateway_mac TEXT,
+      connection_type TEXT,
+      rx_errors INTEGER NOT NULL DEFAULT 0,
+      tx_errors INTEGER NOT NULL DEFAULT 0,
+      rx_dropped INTEGER NOT NULL DEFAULT 0,
+      tx_dropped INTEGER NOT NULL DEFAULT 0,
+      timestamp INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS tcp_connect_results (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      host TEXT NOT NULL DEFAULT '1.1.1.1',
+      port INTEGER NOT NULL DEFAULT 443,
+      status TEXT NOT NULL,
+      latency_ms REAL,
+      timestamp INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS dns_extra_checks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      consistency TEXT NOT NULL,
+      nxdomain TEXT NOT NULL,
+      hijacking TEXT NOT NULL,
+      doh TEXT NOT NULL,
+      dns_leak TEXT NOT NULL DEFAULT 'unknown',
+      timestamp INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS captive_portal_checks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      status TEXT NOT NULL,
+      timestamp INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS http_redirect_checks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      status TEXT NOT NULL,
+      timestamp INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS ntp_checks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      status TEXT NOT NULL,
+      drift_ms INTEGER,
+      timestamp INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS os_resolver_checks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      status TEXT NOT NULL,
+      nameservers TEXT NOT NULL,
+      timestamp INTEGER NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_ping_results_target_ts ON ping_results(target, timestamp);
     CREATE INDEX IF NOT EXISTS idx_dns_results_server_ts ON dns_results(server, timestamp);
     CREATE INDEX IF NOT EXISTS idx_http_results_url_ts ON http_results(url, timestamp);
@@ -104,7 +165,21 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_network_stats_ts ON network_stats(interface, timestamp);
     CREATE INDEX IF NOT EXISTS idx_ssl_checks_host_ts ON ssl_checks(host, timestamp);
     CREATE INDEX IF NOT EXISTS idx_misc_checks_type_ts ON misc_checks(type, timestamp);
+    CREATE INDEX IF NOT EXISTS idx_interface_checks_ts ON interface_checks(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_tcp_connect_ts ON tcp_connect_results(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_dns_extra_ts ON dns_extra_checks(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_captive_portal_ts ON captive_portal_checks(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_http_redirect_ts ON http_redirect_checks(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_ntp_checks_ts ON ntp_checks(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_os_resolver_ts ON os_resolver_checks(timestamp);
   `);
+
+  // Migration: add has_black_hole column to traceroute_results if it doesn't exist yet
+  try {
+    sqlite.exec(`ALTER TABLE traceroute_results ADD COLUMN has_black_hole INTEGER NOT NULL DEFAULT 0;`);
+  } catch {
+    // Column already exists — safe to ignore
+  }
 
   console.log(`[DB] Initialized at ${DB_PATH}`);
 }

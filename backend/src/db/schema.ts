@@ -37,6 +37,7 @@ export const tracerouteResults = sqliteTable("traceroute_results", {
   target: text("target").notNull(),
   hops: text("hops").notNull(), // JSON: [{hop: 1, ip: '...', rttMs: 12.3}]
   routingChanged: integer("routing_changed", { mode: "boolean" }).notNull().default(false),
+  hasBlackHole: integer("has_black_hole", { mode: "boolean" }).notNull().default(false),
   timestamp: integer("timestamp").notNull(),
 });
 
@@ -89,5 +90,73 @@ export const miscChecks = sqliteTable("misc_checks", {
   type: text("type", { enum: ["cgnat", "mtu", "dhcp", "ipv6"] }).notNull(),
   status: text("status").notNull(),
   value: text("value"), // JSON with extra details
+  timestamp: integer("timestamp").notNull(),
+});
+
+// Network interface status checks
+export const interfaceChecks = sqliteTable("interface_checks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  interfaceName: text("interface_name").notNull(),
+  status: text("status", { enum: ["up", "down", "unknown"] }).notNull(),
+  ipv4: text("ipv4"),
+  ipv6LinkLocal: text("ipv6_link_local"),
+  gatewayIp: text("gateway_ip"),
+  gatewayMac: text("gateway_mac"),
+  connectionType: text("connection_type", { enum: ["dhcp", "pppoe", "static", "unknown"] }),
+  rxErrors: integer("rx_errors").notNull().default(0),
+  txErrors: integer("tx_errors").notNull().default(0),
+  rxDropped: integer("rx_dropped").notNull().default(0),
+  txDropped: integer("tx_dropped").notNull().default(0),
+  timestamp: integer("timestamp").notNull(),
+});
+
+// TCP connectivity check results
+export const tcpConnectResults = sqliteTable("tcp_connect_results", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  host: text("host").notNull().default("1.1.1.1"),
+  port: integer("port").notNull().default(443),
+  status: text("status", { enum: ["ok", "timeout", "error"] }).notNull(),
+  latencyMs: real("latency_ms"),
+  timestamp: integer("timestamp").notNull(),
+});
+
+// Extended DNS quality checks
+export const dnsExtraChecks = sqliteTable("dns_extra_checks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  consistency: text("consistency", { enum: ["ok", "mismatch", "unknown"] }).notNull(),
+  nxdomain: text("nxdomain", { enum: ["ok", "fail"] }).notNull(),
+  hijacking: text("hijacking", { enum: ["ok", "hijacked", "unknown"] }).notNull(),
+  doh: text("doh", { enum: ["ok", "fail", "unknown"] }).notNull(),
+  dnsLeak: text("dns_leak", { enum: ["ok", "leak", "unknown"] }).notNull().default("unknown"),
+  timestamp: integer("timestamp").notNull(),
+});
+
+// Captive portal detection checks
+export const captivePortalChecks = sqliteTable("captive_portal_checks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  status: text("status", { enum: ["clean", "detected", "error"] }).notNull(),
+  timestamp: integer("timestamp").notNull(),
+});
+
+// HTTP redirect / interception checks
+export const httpRedirectChecks = sqliteTable("http_redirect_checks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  status: text("status", { enum: ["ok", "intercepted", "error"] }).notNull(),
+  timestamp: integer("timestamp").notNull(),
+});
+
+// NTP time sync checks
+export const ntpChecks = sqliteTable("ntp_checks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  status: text("status", { enum: ["ok", "fail"] }).notNull(),
+  driftMs: integer("drift_ms"),
+  timestamp: integer("timestamp").notNull(),
+});
+
+// OS resolver (nameserver) checks
+export const osResolverChecks = sqliteTable("os_resolver_checks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  status: text("status", { enum: ["ok", "fail"] }).notNull(),
+  nameservers: text("nameservers").notNull(), // JSON array: '["1.1.1.1","8.8.8.8"]'
   timestamp: integer("timestamp").notNull(),
 });
