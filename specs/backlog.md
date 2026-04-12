@@ -84,8 +84,8 @@
 
 - [x] **T25** — i18n core: locale store + t() + detectLocale · [plans/25-i18n.md](plans/25-i18n.md) — locale store, t() derived, fallback chain, 9 тестов зелёных
 - [x] **T26** — ru.ts + en.ts: все ~500 ключей + LangSwitcher · [plans/26-i18n-strings.md](plans/26-i18n-strings.md) — ~406 ключей на локаль, LangSwitcher.svelte создан
-- [ ] **T27** — macOS: interface.ts + system.ts + networkStats по платформе · [plans/27-macos.md](plans/27-macos.md)
-- [ ] **T28** — Manual Trigger API: POST /api/run/:type (+ 409 guard) · [plans/28-run-api.md](plans/28-run-api.md)
+- [x] **T27** — macOS: interface.ts + system.ts + networkStats по платформе · [plans/27-macos.md](plans/27-macos.md) — macOS-ветки для всех Linux-команд реализованы
+- [x] **T28** — Manual Trigger API: POST /api/run/:type (+ 409 guard) · [plans/28-run-api.md](plans/28-run-api.md) — endpoint добавлен, in-flight guard работает
 
 ---
 
