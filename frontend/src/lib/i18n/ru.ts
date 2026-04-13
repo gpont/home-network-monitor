@@ -147,7 +147,7 @@ const ru = {
   'check.route_stable.fix.2':  'Проверь стабильность маршрута: mtr --report-cycles 5 8.8.8.8',
 
   'check.isp_dns.name': 'DNS провайдера',
-  'check.isp_dns.hint': 'Информация о DNS провайдера.',
+  'check.isp_dns.hint': 'DNS из /etc/resolv.conf. 127.0.0.53 = systemd-resolved (Arch/Ubuntu), 127.0.0.1 = dnsmasq/unbound.',
 
   // ── Checks — Layer 4: Internet (L3) ──────────────────────
   'check.ping_8888.name':   'Ping 8.8.8.8',
@@ -312,7 +312,7 @@ const ru = {
   'check.route_stable_sec.fix.1':  'Проверь стабильность: mtr --report-cycles 5 8.8.8.8',
 
   'check.os_resolver.name':   'OS резолвер',
-  'check.os_resolver.hint':   '/etc/resolv.conf содержит nameserver.',
+  'check.os_resolver.hint':   '/etc/resolv.conf содержит nameserver. 127.0.0.53 = systemd-resolved — это нормально на Arch/Ubuntu.',
   'check.os_resolver.fix.0':  '/etc/resolv.conf пустой или отсутствует — система не может резолвить DNS',
   'check.os_resolver.fix.1':  'Добавь nameserver: echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf',
   'check.os_resolver.fix.2':  'Или настрой через NetworkManager: nmcli connection modify <name> ipv4.dns "8.8.8.8"',
@@ -435,6 +435,7 @@ const ru = {
   'nodata.add_gw_dns_server':      'Нет DNS-сервера роутера в настройках. Добавь IP роутера в DNS_SERVERS.',
   'nodata.dns_pending':            'Данные DNS ещё не собраны (интервал 60 секунд).',
   'nodata.dns_extended_pending':   'Расширенные DNS-проверки ещё не выполнены (интервал 5 минут).',
+  'nodata.dns_leak_unknown':       'Используется локальный резолвер (systemd-resolved / 127.0.0.53 или dnsmasq). Проверить утечку DNS невозможно — это нормально.',
   'nodata.http_pending':           'HTTP-чеки ещё не выполнены (интервал 60 секунд).',
   'nodata.http_redirect_pending':  'HTTP redirect-проверка ещё не выполнена (интервал 60 секунд).',
   'nodata.ipv6_pending':           'IPv6-чек ещё не выполнен (интервал 30 секунд).',

@@ -149,7 +149,7 @@ const en: Record<TranslationKey, string> = {
   'check.route_stable.fix.2':  'Check route stability: mtr --report-cycles 5 8.8.8.8',
 
   'check.isp_dns.name': 'ISP DNS',
-  'check.isp_dns.hint': 'ISP DNS server information.',
+  'check.isp_dns.hint': 'DNS from /etc/resolv.conf. 127.0.0.53 = systemd-resolved (Arch/Ubuntu), 127.0.0.1 = dnsmasq/unbound.',
 
   // ── Checks — Layer 4 ─────────────────────────────────────
   'check.ping_8888.name':   'Ping 8.8.8.8',
@@ -314,7 +314,7 @@ const en: Record<TranslationKey, string> = {
   'check.route_stable_sec.fix.1':  'Check stability: mtr --report-cycles 5 8.8.8.8',
 
   'check.os_resolver.name':   'OS resolver',
-  'check.os_resolver.hint':   '/etc/resolv.conf contains nameserver.',
+  'check.os_resolver.hint':   '/etc/resolv.conf contains nameserver. 127.0.0.53 = systemd-resolved — normal on Arch/Ubuntu.',
   'check.os_resolver.fix.0':  '/etc/resolv.conf is empty or missing — system cannot resolve DNS',
   'check.os_resolver.fix.1':  'Add nameserver: echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf',
   'check.os_resolver.fix.2':  'Or configure via NetworkManager: nmcli connection modify <name> ipv4.dns "8.8.8.8"',
@@ -437,6 +437,7 @@ const en: Record<TranslationKey, string> = {
   'nodata.add_gw_dns_server':      'No router DNS server configured. Add router IP to DNS_SERVERS.',
   'nodata.dns_pending':            'DNS data not yet collected (interval: 60 sec).',
   'nodata.dns_extended_pending':   'Extended DNS checks not yet run (interval: 5 min).',
+  'nodata.dns_leak_unknown':       'Local resolver in use (systemd-resolved / 127.0.0.53 or dnsmasq). DNS leak cannot be checked — this is normal.',
   'nodata.http_pending':           'HTTP checks not yet run (interval: 60 sec).',
   'nodata.http_redirect_pending':  'HTTP redirect check not yet run (interval: 60 sec).',
   'nodata.ipv6_pending':           'IPv6 check not yet run (interval: 30 sec).',

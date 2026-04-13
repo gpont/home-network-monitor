@@ -25,6 +25,13 @@ function isStale(timestamp: number | undefined, staleMs: number): boolean {
   return Date.now() - timestamp > staleMs;
 }
 
+/** Maps known loopback resolver addresses to human-readable labels. */
+function resolverLabel(ns: string): string {
+  if (ns === '127.0.0.53') return 'systemd-resolved (127.0.0.53)';
+  if (ns === '127.0.0.1') return '127.0.0.1 (local)';
+  return ns;
+}
+
 function pingFor(s: StatusResponse, target: string) {
   return s.ping.find(p => p.target === target || p.target.startsWith(target));
 }
@@ -389,7 +396,7 @@ export const CHECKS: CheckDefinition[] = [
     hint: "check.isp_dns.hint",
     noDataHint: "check.isp_dns.noData",
     staleAfterMs: STALE.s60,
-    getValue: s => s.osResolver?.nameservers?.[0] ?? null,
+    getValue: s => { const ns = s.osResolver?.nameservers?.[0]; return ns ? resolverLabel(ns) : null; },
     getStatus: s => {
       if (!s.osResolver) return "unknown";
       return s.osResolver.status === "ok" ? "ok" : "unknown";
@@ -845,7 +852,7 @@ export const CHECKS: CheckDefinition[] = [
     hint: "check.os_resolver.hint",
     noDataHint: "check.os_resolver.noData",
     staleAfterMs: STALE.m5,
-    getValue: s => s.osResolver?.nameservers?.[0] ?? null,
+    getValue: s => { const ns = s.osResolver?.nameservers?.[0]; return ns ? resolverLabel(ns) : null; },
     getStatus: s => {
       if (!s.osResolver) return "unknown";
       if (isStale(s.osResolver.timestamp, STALE.m5)) return "stale";
@@ -856,7 +863,7 @@ export const CHECKS: CheckDefinition[] = [
   {
     id: "dns_leak", layer: 7, name: "check.dns_leak.name", description: "DNS запросы не утекают через посторонние серверы",
     hint: "check.dns_leak.hint",
-    noDataHint: "nodata.dns_extended_pending",
+    noDataHint: "nodata.dns_leak_unknown",
     staleAfterMs: STALE.m5,
     getValue: s => s.dnsExtra?.dnsLeak ?? null,
     getStatus: s => {
