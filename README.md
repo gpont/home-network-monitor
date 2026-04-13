@@ -74,6 +74,49 @@ docker-compose up -d
 
 Open `http://your-server-ip:3201`
 
+### Option 3 — NixOS (flake module)
+
+Add the flake as an input and enable the module in your NixOS configuration:
+
+**`flake.nix`** (your system flake):
+```nix
+inputs.home-network-monitor.url = "github:gpont/home-network-monitor";
+```
+
+**`configuration.nix`** (or any imported module):
+```nix
+{ inputs, ... }: {
+  imports = [ inputs.home-network-monitor.nixosModules.default ];
+
+  services.home-network-monitor = {
+    enable       = true;
+    openFirewall = true;   # opens port 3201 in networking.firewall
+  };
+}
+```
+
+The module runs a hardened systemd service with `DynamicUser`, `CAP_NET_RAW` for ping/traceroute, and stores the database at `/var/lib/home-network-monitor/monitor.db`.
+
+**Module options:**
+
+| Option | Default | Description |
+|---|---|---|
+| `port` | `3201` | TCP port the dashboard listens on |
+| `openFirewall` | `false` | Open the port in `networking.firewall` |
+| `settings.sslHosts` | `["google.com", ...]` | Hosts to monitor for TLS expiry |
+| `settings.iperf3Server` | `null` | Optional iperf3 server for LAN bandwidth tests |
+| `environmentFile` | `null` | Path to an env file for secrets / per-host overrides |
+
+**Lockfile note:** the Nix build reads `package-lock.json`. After adding packages with `bun add`, regenerate it:
+```bash
+npm install --package-lock-only
+```
+
+**Quick test on any NixOS/nix machine:**
+```bash
+nix run github:gpont/home-network-monitor
+```
+
 ## Configuration
 
 | Variable | Default | Description |
