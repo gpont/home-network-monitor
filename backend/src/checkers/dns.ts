@@ -102,9 +102,14 @@ export interface DnsAnswerResult {
   answer: string | null;
 }
 
-export function checkDnsConsistency(results: DnsAnswerResult[]): "ok" | "mismatch" | "unknown" {
+export function checkDnsConsistency(results: DnsAnswerResult[], validAnswers?: Set<string>): "ok" | "mismatch" | "unknown" {
   const okResults = results.filter(r => r.status === "ok" && r.answer !== null);
   if (okResults.length === 0) return "unknown";
+  if (validAnswers) {
+    // All ok answers must be within the known-valid set for this domain.
+    // Catches hijacking while tolerating legitimate anycast IPs (e.g. one.one.one.one → 1.1.1.1 or 1.0.0.1).
+    return okResults.every(r => validAnswers.has(r.answer!)) ? "ok" : "mismatch";
+  }
   const answers = new Set(okResults.map(r => r.answer));
   return answers.size === 1 ? "ok" : "mismatch";
 }
@@ -152,7 +157,7 @@ export async function checkDnsExtras(servers: Array<{ ip: string; label: string 
     })
   );
 
-  const consistency = checkDnsConsistency(answers);
+  const consistency = checkDnsConsistency(answers, CLOUDFLARE_ONE_IPS);
   const hijacking = checkHijacking(answers[0]?.answer ?? null);
 
   // NXDOMAIN check

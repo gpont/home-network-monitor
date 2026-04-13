@@ -36,8 +36,9 @@ function mtuIsOk(s: StatusResponse): boolean {
   if (s.mtu.status === "ok") return true;
   try {
     const maxMtu: number = JSON.parse(s.mtu.value ?? "{}").maxMtu ?? 0;
-    const isPPPoE = s.interface?.connectionType === "pppoe";
-    return isPPPoE ? maxMtu >= 1492 : maxMtu >= 1500;
+    // 1492 is the minimum acceptable MTU for home networks — covers both direct PPPoE
+    // and DHCP behind a PPPoE router where the router's overhead propagates the MTU restriction.
+    return maxMtu >= 1492;
   } catch { return false; }
 }
 
@@ -739,7 +740,6 @@ export const CHECKS: CheckDefinition[] = [
     id: "ssl", layer: 7, name: "check.ssl.name", description: "Все SSL сертификаты действительны > 30 дней",
     hint: "check.ssl.hint",
     noDataHint: "check.ssl.noData",
-    configHint: ["check.ssl.config.0", "check.ssl.config.1"],
     staleAfterMs: STALE.h24,
     getValue: s => {
       if (!s.ssl?.length) return null;
@@ -805,9 +805,10 @@ export const CHECKS: CheckDefinition[] = [
     getStatus: s => {
       if (!s.ntp) return "unknown";
       if (isStale(s.ntp.timestamp, STALE.m5)) return "stale";
+      if (s.ntp.driftMs === null) return "unknown"; // NTP server unreachable, can't measure drift
       return s.ntp.status === "ok" ? "ok" : "warn";
     },
-    getFix: s => s.ntp?.status === "fail" ? ["check.ntp.fix.0", "check.ntp.fix.1", "check.ntp.fix.2"] : null,
+    getFix: s => (s.ntp?.status === "fail" && s.ntp.driftMs !== null) ? ["check.ntp.fix.0", "check.ntp.fix.1", "check.ntp.fix.2"] : null,
   },
   {
     id: "ip_stable", layer: 7, name: "check.ip_stable.name", description: "Публичный IP стабилен последние 24 часа",

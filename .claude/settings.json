@@ -1,7 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs kill:*)",
       "Bash(docker-compose up:*)",
       "Bash(curl -v http://localhost:3201/api/status)",
       "Bash(git tag:*)",
@@ -12,7 +11,16 @@
       "Bash(curl -s http://localhost:3000/api/status)",
       "Bash(curl -s http://localhost:3000/api/checks)",
       "Bash(~/.bun/bin/bun x:*)",
-      "Bash(tsc --noEmit -p frontend/tsconfig.json)"
+      "Bash(tsc --noEmit -p frontend/tsconfig.json)",
+      "Bash(git -C /Users/gpont/Projects/home-network-monitor show e3ffe29 --stat)",
+      "Bash(git -C /Users/gpont/Projects/home-network-monitor log --oneline ce270b33..e3ffe29)",
+      "Bash(git -C /Users/gpont/Projects/home-network-monitor show --stat 6a9d86c)",
+      "Bash(git -C /Users/gpont/Projects/home-network-monitor show b2ff63b)",
+      "Bash(bun run:*)",
+      "Bash('~/.bun/bin/bun' -e ':*)"
+    ],
+    "ask": [
+      "Bash(xargs kill:*)"
     ]
   }
 }

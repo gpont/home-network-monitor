@@ -444,7 +444,7 @@ const en: Record<TranslationKey, string> = {
   'nodata.captive_portal_pending': 'Captive portal check not yet run (interval: 60 sec).',
   'nodata.ssl_pending':            'SSL checks not yet run (interval: 24 hr). Or SSL_HOSTS is not configured.',
   'nodata.mtu_check_pending':      'MTU check not yet run (interval: 15 min).',
-  'nodata.ntp_pending':            'NTP check not yet run (interval: 5 min).',
+  'nodata.ntp_pending':            'NTP server unreachable or check not yet run. UDP port 123 may be blocked by your ISP.',
   'nodata.publicip_stable_pending':'Public IP data not yet collected (interval: 5 min).',
 
   // ── Check-specific noData / config / fix.3 (new keys) ────
@@ -473,8 +473,8 @@ const en: Record<TranslationKey, string> = {
   'check.dns_gw.noData':         'No router DNS server in settings. Add router IP to DNS_SERVERS.',
   'check.ssl.config.0':          'Add domains to .env: SSL_HOSTS=yourdomain.com,another.com',
   'check.ssl.config.1':          'Restart: docker compose restart',
-  'check.ssl.noData':            'SSL_HOSTS not set in .env. Add domains to monitor certificates.',
-  'check.tls_ver.noData':        'SSL_HOSTS not set in .env. Add domains to monitor.',
+  'check.ssl.noData':            'Waiting for first certificate check (checks google.com, cloudflare.com, github.com or SSL_HOSTS from .env).',
+  'check.tls_ver.noData':        'Waiting for SSL check data.',
   'check.path_mtu.fix.3':        'Verify: ping -M do -s 1472 8.8.8.8 (Linux) / ping -D -s 1472 8.8.8.8 (macOS)',
   "check.os_resolver.noData":    "Inside Docker bridge network, container's /etc/resolv.conf is visible, not host's.",
   'check.iface_anomaly.noData':  'Not available inside Docker bridge network. Requires network_mode: host on Linux.',

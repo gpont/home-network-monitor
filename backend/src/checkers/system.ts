@@ -26,6 +26,17 @@ export function parseNtpResponse(buf: Buffer): { status: "ok" | "fail"; driftMs:
 }
 
 async function checkNtp(): Promise<{ status: "ok" | "fail"; driftMs: number | null }> {
+  // Resolve hostname to IP first — Bun.udpSocket.send() requires an IP address
+  let ip: string;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const addrs: Array<{ address: string }> = await (Bun as any).dns.resolve("pool.ntp.org");
+    ip = addrs[0]?.address ?? "";
+    if (!ip) return { status: "fail", driftMs: null };
+  } catch {
+    return { status: "fail", driftMs: null };
+  }
+
   return new Promise((resolve) => {
     const timeout = setTimeout(() => resolve({ status: "fail", driftMs: null }), 5000);
     try {
@@ -40,7 +51,7 @@ async function checkNtp(): Promise<{ status: "ok" | "fail"; driftMs: number | nu
           error() { clearTimeout(timeout); resolve({ status: "fail", driftMs: null }); },
         },
       }).then((socket) => {
-        socket.send(buildNtpPacket(), 123, "pool.ntp.org");
+        socket.send(buildNtpPacket(), 123, ip);
       }).catch(() => {
         clearTimeout(timeout);
         resolve({ status: "fail", driftMs: null });

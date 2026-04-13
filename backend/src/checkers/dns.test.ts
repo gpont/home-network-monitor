@@ -10,7 +10,7 @@ describe("checkDnsConsistency", () => {
     ];
     expect(checkDnsConsistency(results)).toBe("ok");
   });
-  test("mismatch when answers differ", () => {
+  test("mismatch when answers differ (no validAnswers set)", () => {
     const results = [
       { status: "ok" as const, answer: "1.1.1.1" },
       { status: "ok" as const, answer: "2.2.2.2" },
@@ -22,6 +22,23 @@ describe("checkDnsConsistency", () => {
       { status: "timeout" as const, answer: null },
     ];
     expect(checkDnsConsistency(results)).toBe("unknown");
+  });
+  test("ok when answers differ but all within validAnswers (anycast)", () => {
+    const valid = new Set(["1.1.1.1", "1.0.0.1"]);
+    const results = [
+      { status: "ok" as const, answer: "1.1.1.1" },
+      { status: "ok" as const, answer: "1.0.0.1" },
+      { status: "ok" as const, answer: "1.1.1.1" },
+    ];
+    expect(checkDnsConsistency(results, valid)).toBe("ok");
+  });
+  test("mismatch when one answer is outside validAnswers (hijacked)", () => {
+    const valid = new Set(["1.1.1.1", "1.0.0.1"]);
+    const results = [
+      { status: "ok" as const, answer: "203.0.113.1" }, // hijacked router answer
+      { status: "ok" as const, answer: "1.1.1.1" },
+    ];
+    expect(checkDnsConsistency(results, valid)).toBe("mismatch");
   });
 });
 

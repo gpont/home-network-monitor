@@ -442,7 +442,7 @@ const ru = {
   'nodata.captive_portal_pending': 'Проверка captive portal ещё не выполнена (интервал 60 секунд).',
   'nodata.ssl_pending':            'SSL-чеки ещё не выполнены (интервал 24 часа). Или не задан SSL_HOSTS в настройках.',
   'nodata.mtu_check_pending':      'MTU-чек ещё не выполнен (интервал 15 минут).',
-  'nodata.ntp_pending':            'NTP-чек ещё не выполнен (интервал 5 минут).',
+  'nodata.ntp_pending':            'NTP-сервер недоступен или чек ещё не выполнен. Возможно, UDP порт 123 заблокирован провайдером.',
   'nodata.publicip_stable_pending':'Данные публичного IP ещё не собраны (интервал 5 минут).',
 
   // ── Check-specific noData / config / fix.3 (new keys) ────
@@ -471,8 +471,8 @@ const ru = {
   'check.dns_gw.noData':         'Нет DNS-сервера роутера в настройках. Добавь IP роутера в DNS_SERVERS.',
   'check.ssl.config.0':          'Добавь домены в .env: SSL_HOSTS=yourdomain.com,another.com',
   'check.ssl.config.1':          'Перезапусти: docker compose restart',
-  'check.ssl.noData':            'Не задан SSL_HOSTS в .env. Добавь домены для мониторинга сертификатов.',
-  'check.tls_ver.noData':        'Не задан SSL_HOSTS в .env. Добавь домены для мониторинга.',
+  'check.ssl.noData':            'Ожидание первой проверки сертификатов (проверяются google.com, cloudflare.com, github.com или SSL_HOSTS из .env).',
+  'check.tls_ver.noData':        'Ожидание данных SSL-проверки.',
   'check.path_mtu.fix.3':        'Проверь: ping -M do -s 1472 8.8.8.8 (Linux) / ping -D -s 1472 8.8.8.8 (macOS)',
   'check.os_resolver.noData':    'Внутри Docker с bridge-сетью виден /etc/resolv.conf контейнера, а не хоста.',
   'check.iface_anomaly.noData':  'Недоступно внутри Docker с bridge-сетью. Требует network_mode: host на Linux.',

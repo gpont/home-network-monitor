@@ -91,7 +91,13 @@ const RULES: DiagnosticRule[] = [
     title: "diag.R8.title",
     description: "diag.R8.desc",
     steps: ["diag.R8.step.0", "diag.R8.step.1", "diag.R8.step.2", "diag.R8.step.3"],
-    condition: s => s.mtu?.status === "fragmentation_detected" || s.mtu?.status === "error",
+    condition: s => {
+      if (s.mtu?.status === "error") return true;
+      if (s.mtu?.status === "fragmentation_detected") {
+        try { return (JSON.parse(s.mtu.value ?? "{}").maxMtu ?? 0) < 1492; } catch { return true; }
+      }
+      return false;
+    },
   },
   {
     id: "R9", severity: "info",
