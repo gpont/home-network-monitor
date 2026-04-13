@@ -37,31 +37,43 @@ export function parseIfconfigOutput(out: string): {
   ipv4: string | null;
   ipv6LinkLocal: string | null;
 } {
-  // Find first physical (non-loopback, non-virtual) UP interface
-  const ifaceMatch = out.match(/^(en\d+|eth\d+|wlan\d+):.*flags=\S+<([^>]+)>/m);
-  if (!ifaceMatch) return { name: "unknown", status: "unknown", ipv4: null, ipv6LinkLocal: null };
+  // Collect all physical (non-loopback) interface sections, pick first with an inet address
+  const ifaceRe = /^(en\d+|eth\d+|wlan\d+):.*flags=\S+<([^>]+)>/gm;
+  const nextHeaderRe = /^[\w]+\d[\w.]*:/m;
 
-  const name = ifaceMatch[1] ?? "unknown";
-  const flags = ifaceMatch[2] ?? "";
-  const status: "up" | "down" | "unknown" = flags.includes("UP") ? "up" : "down";
+  type IfaceResult = { name: string; status: "up" | "down" | "unknown"; ipv4: string | null; ipv6LinkLocal: string | null };
+  let firstFound: IfaceResult | null = null;
 
-  // Only parse addresses from the matched interface's section (until the next interface header)
-  const sectionStart = ifaceMatch.index ?? 0;
-  const afterHeader = sectionStart + ifaceMatch[0].length;
-  const nextIfaceMatch = out.slice(afterHeader).match(/^(en\d+|eth\d+|wlan\d+|\w+\d[\w.]*):/m);
-  const section = nextIfaceMatch?.index != null
-    ? out.slice(sectionStart, afterHeader + nextIfaceMatch.index)
-    : out.slice(sectionStart);
+  let match: RegExpExecArray | null;
+  while ((match = ifaceRe.exec(out)) !== null) {
+    const name = match[1] ?? "unknown";
+    const flags = match[2] ?? "";
+    const status: "up" | "down" | "unknown" = flags.includes("UP") ? "up" : "down";
 
-  const v4 = section.match(/\binet\s+(\d+\.\d+\.\d+\.\d+)/);
-  const v6 = section.match(/\binet6\s+(fe80:[^\s%/]+)/i);
+    // Extract this interface's section (up to the next interface header)
+    const sectionStart = match.index;
+    const afterHeader = sectionStart + match[0].length;
+    const nextMatch = out.slice(afterHeader).match(nextHeaderRe);
+    const section = nextMatch?.index != null
+      ? out.slice(sectionStart, afterHeader + nextMatch.index)
+      : out.slice(sectionStart);
 
-  return {
-    name,
-    status,
-    ipv4: v4?.[1] ?? null,
-    ipv6LinkLocal: v6?.[1] ?? null,
-  };
+    const v4 = section.match(/\binet\s+(\d+\.\d+\.\d+\.\d+)/);
+    const v6 = section.match(/\binet6\s+(fe80:[^\s%/]+)/i);
+
+    const result: IfaceResult = {
+      name,
+      status,
+      ipv4: v4?.[1] ?? null,
+      ipv6LinkLocal: v6?.[1] ?? null,
+    };
+
+    // Prefer the first interface with an IPv4 address; keep first found as fallback
+    if (!firstFound) firstFound = result;
+    if (v4) return result;
+  }
+
+  return firstFound ?? { name: "unknown", status: "unknown", ipv4: null, ipv6LinkLocal: null };
 }
 
 export function parseNetstatRouteOutput(out: string): {

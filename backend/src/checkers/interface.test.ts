@@ -82,6 +82,24 @@ en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
     expect(result.name).toBe("en0");
     expect(result.ipv4).toBe("192.168.1.5");
   });
+
+  test("skips inactive en interfaces without inet and finds active en0", () => {
+    const out = `en4: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+\tether 7a:64:40:3d:02:43
+\tstatus: inactive
+en5: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+\tether 7a:64:40:3d:02:44
+\tstatus: inactive
+en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+\tether 36:82:41:2e:cc:07
+\tinet6 fe80::1805:bf2e:9f4f:3eed%en0 prefixlen 64 secured scopeid 0xf
+\tinet 192.168.1.254 netmask 0xffffff00 broadcast 192.168.1.255
+\tstatus: active`;
+    const result = parseIfconfigOutput(out);
+    expect(result.name).toBe("en0");
+    expect(result.ipv4).toBe("192.168.1.254");
+    expect(result.ipv6LinkLocal).toBe("fe80::1805:bf2e:9f4f:3eed");
+  });
 });
 
 describe("parseNetstatRouteOutput (macOS)", () => {
