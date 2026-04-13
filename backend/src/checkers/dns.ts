@@ -113,9 +113,12 @@ export function checkNxdomain(digOutput: string): "ok" | "fail" {
   return digOutput.includes("NXDOMAIN") ? "ok" : "fail";
 }
 
+// one.one.one.one has two valid IPs: 1.1.1.1 and 1.0.0.1
+const CLOUDFLARE_ONE_IPS = new Set(["1.1.1.1", "1.0.0.1"]);
+
 export function checkHijacking(answer: string | null): "ok" | "hijacked" | "unknown" {
   if (!answer) return "unknown";
-  return answer === "1.1.1.1" ? "ok" : "hijacked";
+  return CLOUDFLARE_ONE_IPS.has(answer) ? "ok" : "hijacked";
 }
 
 async function queryDns(server: string, domain: string): Promise<string | null> {

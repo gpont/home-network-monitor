@@ -38,6 +38,9 @@ describe("checkHijacking", () => {
   test("ok when answer is 1.1.1.1", () => {
     expect(checkHijacking("1.1.1.1")).toBe("ok");
   });
+  test("ok when answer is 1.0.0.1 (also valid Cloudflare IP for one.one.one.one)", () => {
+    expect(checkHijacking("1.0.0.1")).toBe("ok");
+  });
   test("hijacked when answer is different", () => {
     expect(checkHijacking("8.8.8.8")).toBe("hijacked");
   });
