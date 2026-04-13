@@ -22,6 +22,8 @@ jobs:
           bun-version: latest
       - run: bun install
       - run: bun test
+        env:
+          DB_PATH: /tmp/test.db
       - run: bun run typecheck
 
   publish:
