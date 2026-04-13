@@ -175,9 +175,10 @@ async function runAll(
   // DNS extras after traceroute so gateway IP is available
   await checkDnsExtras(dnsServers).then((r) => broadcast("dnsExtra", r)).catch(() => {});
 
-  // SSL and MTU are slower, run async
+  // Slower checks — run async, don't block startup
   Promise.all(config.sslHosts.map(checkSslCert)).then((r) => broadcast("ssl", r));
   checkMtu().then((r) => broadcast("mtu", r));
+  runSpeedtest().then((r) => broadcast("speedtest", r)).catch(() => {});
 }
 
 function scheduleInterval(name: string, intervalMs: number, fn: () => Promise<void>) {
