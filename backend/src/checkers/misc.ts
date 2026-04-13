@@ -36,8 +36,12 @@ export async function checkCgnat(ispHopIp: string | null) {
 export async function checkMtu() {
   const ts = now();
 
-  // 1472 = 1500 (MTU) - 20 (IP) - 8 (ICMP)
-  const sizes = [1472, 1400, 1300, 576];
+  // Sizes = desired MTU - 20 (IP header) - 8 (ICMP header)
+  // 1472 → 1500 (Ethernet standard)
+  // 1464 → 1492 (PPPoE standard)
+  // 1452 → 1480 (PPPoE with some overhead / tunnels)
+  // 1400 → 1428 (some VPNs / restrictive ISPs)
+  const sizes = [1472, 1464, 1452, 1400, 1300, 576];
   let maxOk = 0;
   let status = "ok";
 
