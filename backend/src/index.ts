@@ -39,6 +39,7 @@ function broadcast(event: string, data: unknown) {
 
 const server = Bun.serve({
   port: config.port,
+  hostname: "0.0.0.0",
   fetch(req, server) {
     // Upgrade WebSocket connections
     if (req.headers.get("upgrade") === "websocket") {
