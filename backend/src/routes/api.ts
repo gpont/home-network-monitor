@@ -4,6 +4,7 @@ import { runSpeedtest } from "../checkers/speedtest.ts";
 import { runTraceroute } from "../checkers/traceroute.ts";
 import { checkMtu, checkCgnat } from "../checkers/misc.ts";
 import { checkPublicIp } from "../checkers/publicip.ts";
+import { extractIspHop } from "../checkers/traceroute.ts";
 import {
   pingResults,
   dnsResults,
@@ -422,7 +423,12 @@ export function buildApiRoutes(db: BunSQLiteDatabase<any>) {
       if (type === "speedtest") result = await runSpeedtest();
       else if (type === "traceroute") result = await runTraceroute("8.8.8.8");
       else if (type === "mtu") result = await checkMtu();
-      else if (type === "cgnat") result = await checkCgnat(null);
+      else if (type === "cgnat") {
+        // Derive ISP hop from the most recent traceroute in DB
+        const latestTr = await db.select().from(tracerouteResults).orderBy(desc(tracerouteResults.timestamp)).limit(1);
+        const ispHop = latestTr[0] ? extractIspHop(JSON.parse(latestTr[0].hops)) : null;
+        result = await checkCgnat(ispHop);
+      }
       else if (type === "publicip") result = await checkPublicIp();
       return c.json({ ok: true, result });
     } catch (err) {
