@@ -1,6 +1,7 @@
 import type { Config } from "./config.ts";
 import { detectGateway, runPingChecks, runTcpConnectCheck } from "./checkers/ping.ts";
 import { runDnsChecks, checkDnsExtras } from "./checkers/dns.ts";
+import { parseResolvConf } from "./checkers/system.ts";
 import { runHttpChecks, checkCaptivePortal, checkHttpRedirect } from "./checkers/http.ts";
 import { runTraceroute, extractIspHop } from "./checkers/traceroute.ts";
 import { runSpeedtest } from "./checkers/speedtest.ts";
@@ -22,6 +23,7 @@ type BroadcastFn = (event: string, data: unknown) => void;
 
 let gatewayIp: string | null = null;
 let ispHopIp: string | null = null;
+let osResolverIp: string | null = null;
 
 export async function startScheduler(config: Config, broadcast: BroadcastFn) {
   console.log("[scheduler] Starting...");
@@ -30,17 +32,23 @@ export async function startScheduler(config: Config, broadcast: BroadcastFn) {
 
   await loadLastIp();
 
-  // Detect gateway once at startup
-  gatewayIp = await detectGateway();
+  // Detect gateway and OS resolver once at startup
+  [gatewayIp, osResolverIp] = await Promise.all([
+    detectGateway(),
+    detectOsResolver(),
+  ]);
   if (gatewayIp) {
     console.log(`[scheduler] Gateway detected: ${gatewayIp}`);
   } else {
     console.warn("[scheduler] Could not detect gateway, skipping router ping");
   }
+  if (osResolverIp) {
+    console.log(`[scheduler] OS resolver detected: ${osResolverIp}`);
+  }
 
   // Build resolved target lists
   const pingTargets = buildPingTargets(config, gatewayIp, ispHopIp);
-  const dnsServers = buildDnsServers(config, gatewayIp);
+  const dnsServers = buildDnsServers(config, gatewayIp, osResolverIp);
 
   // Run everything immediately on startup
   await runAll(config, pingTargets, dnsServers, broadcast);
@@ -53,7 +61,7 @@ export async function startScheduler(config: Config, broadcast: BroadcastFn) {
   });
 
   scheduleInterval("dns", config.intervals.dns, async () => {
-    const servers = buildDnsServers(config, gatewayIp);
+    const servers = buildDnsServers(config, gatewayIp, osResolverIp);
     const results = await runDnsChecks(servers);
     broadcast("dns", results);
   });
@@ -125,7 +133,7 @@ export async function startScheduler(config: Config, broadcast: BroadcastFn) {
   });
 
   scheduleInterval("dnsExtras", config.intervals.publicIp, async () => {
-    const servers = buildDnsServers(config, gatewayIp);
+    const servers = buildDnsServers(config, gatewayIp, osResolverIp);
     const result = await checkDnsExtras(servers);
     broadcast("dnsExtra", result);
   });
@@ -216,15 +224,32 @@ function buildPingTargets(
 
 function buildDnsServers(
   config: Config,
-  gateway: string | null
+  gateway: string | null,
+  osResolver: string | null
 ) {
   return config.dnsServers
     .map((s) => {
       if (s.ip === "GATEWAY_PLACEHOLDER") {
-        if (!gateway) return null;
-        return { ...s, ip: gateway };
+        // Prefer the OS resolver from /etc/resolv.conf — it's the actual DNS in use.
+        // Falls back to gateway if no external resolver found (e.g. systemd-resolved on 127.0.0.53).
+        const ip = osResolver ?? gateway;
+        if (!ip) return null;
+        return { ...s, ip };
       }
       return s;
     })
     .filter((s): s is NonNullable<typeof s> => s !== null);
+}
+
+async function detectOsResolver(): Promise<string | null> {
+  try {
+    const content = await Bun.file("/etc/resolv.conf").text();
+    const nameservers = parseResolvConf(content);
+    // Use first non-loopback, non-link-local nameserver — that's the actual DNS resolver
+    return nameservers.find(ns =>
+      !ns.startsWith("127.") && ns !== "::1" && !ns.startsWith("169.254.")
+    ) ?? null;
+  } catch {
+    return null;
+  }
 }

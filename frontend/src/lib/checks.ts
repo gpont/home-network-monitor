@@ -136,9 +136,12 @@ export const CHECKS: CheckDefinition[] = [
     getStatus: s => {
       if (!s.interface) return "unknown";
       if (isStale(s.interface.timestamp, STALE.s30)) return "stale";
-      return s.interface.ipv6LinkLocal ? "ok" : "warn";
+      if (s.interface.ipv6LinkLocal) return "ok";
+      // No IPv6 at all (container/host without IPv6) — not actionable
+      if (s.ipv6?.status === "unavailable") return "unknown";
+      return "warn";
     },
-    getFix: s => !s.interface?.ipv6LinkLocal ? ["check.iface_ipv6_ll.fix.0", "check.iface_ipv6_ll.fix.1"] : null,
+    getFix: s => (!s.interface?.ipv6LinkLocal && s.ipv6?.status !== "unavailable") ? ["check.iface_ipv6_ll.fix.0", "check.iface_ipv6_ll.fix.1"] : null,
   },
   {
     id: "iface_arp", layer: 1, name: "check.iface_arp.name", description: "MAC-адрес шлюза есть в ARP таблице",

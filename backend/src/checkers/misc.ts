@@ -239,10 +239,21 @@ export async function checkNetworkStats() {
 }
 
 // ─── Black hole detection ──────────────────────────────────────────────────
+// A black hole is 3+ consecutive null hops BETWEEN visible hops.
+// Trailing null hops at the end of a traceroute are normal (firewalled hops or
+// packets blocked by Docker bridge / ISP) and are NOT counted as a black hole.
 export function detectBlackHole(hops: Array<{ hop: number; ip: string | null; rttMs: number | null }>): boolean {
+  // Find index of last visible hop
+  let lastVisible = -1;
+  for (let i = hops.length - 1; i >= 0; i--) {
+    if (hops[i]!.ip !== null) { lastVisible = i; break; }
+  }
+  // Need at least 2 visible hops to detect an interior hole
+  if (lastVisible <= 0) return false;
+
   let consecutive = 0;
-  for (const hop of hops) {
-    if (hop.ip === null) {
+  for (let i = 0; i < lastVisible; i++) {
+    if (hops[i]!.ip === null) {
       consecutive++;
       if (consecutive >= 3) return true;
     } else {

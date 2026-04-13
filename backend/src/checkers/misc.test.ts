@@ -2,7 +2,7 @@ import { describe, test, expect } from "bun:test";
 import { detectBlackHole, parseDhcpMacOs, parseNetstatInterfaceStats } from "./misc.ts";
 
 describe("detectBlackHole", () => {
-  test("detects 3 consecutive null hops", () => {
+  test("detects 3 consecutive null hops between visible hops", () => {
     const hops = [
       { hop: 1, ip: "192.168.1.1", rttMs: 1.2 },
       { hop: 2, ip: null, rttMs: null },
@@ -12,7 +12,7 @@ describe("detectBlackHole", () => {
     ];
     expect(detectBlackHole(hops)).toBe(true);
   });
-  test("no false positive for 2 consecutive nulls", () => {
+  test("no false positive for 2 consecutive nulls between visible hops", () => {
     const hops = [
       { hop: 1, ip: "192.168.1.1", rttMs: 1 },
       { hop: 2, ip: null, rttMs: null },
@@ -21,8 +21,32 @@ describe("detectBlackHole", () => {
     ];
     expect(detectBlackHole(hops)).toBe(false);
   });
+  test("no false positive for Docker-style traceroute (1 hop then all nulls)", () => {
+    // Docker bridge: only gateway visible, then all nulls — NOT a black hole
+    const hops = [
+      { hop: 1, ip: "172.17.0.1", rttMs: 0.1 },
+      ...Array.from({ length: 19 }, (_, i) => ({ hop: i + 2, ip: null, rttMs: null })),
+    ];
+    expect(detectBlackHole(hops)).toBe(false);
+  });
+  test("no false positive for trailing nulls after destination", () => {
+    // Common internet behaviour: hops after destination don't respond
+    const hops = [
+      { hop: 1, ip: "192.168.1.1", rttMs: 1 },
+      { hop: 2, ip: "10.0.0.1", rttMs: 5 },
+      { hop: 3, ip: "8.8.8.8", rttMs: 15 },
+      { hop: 4, ip: null, rttMs: null },
+      { hop: 5, ip: null, rttMs: null },
+      { hop: 6, ip: null, rttMs: null },
+    ];
+    expect(detectBlackHole(hops)).toBe(false);
+  });
   test("returns false for empty hops", () => {
     expect(detectBlackHole([])).toBe(false);
+  });
+  test("returns false when only 1 visible hop", () => {
+    const hops = [{ hop: 1, ip: "192.168.1.1", rttMs: 1 }];
+    expect(detectBlackHole(hops)).toBe(false);
   });
 });
 
