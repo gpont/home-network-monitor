@@ -1,11 +1,10 @@
 # Triggers:
-#   push to main  → builds and pushes :latest
-#   push tag v*   → builds and pushes :vX.Y.Z AND updates :latest
+#   push to master      → runs checks only (tests + typecheck)
+#   push tag v*         → runs checks, then builds and pushes :vX.Y.Z + :latest
 #
-# Dockerfile — multi-stage, собирает frontend и backend самостоятельно.
-# Отдельного pre-build шага не нужно.
+# Dockerfile — multi-stage, builds frontend and backend independently.
 
-name: Build and Push Docker Image
+name: CI
 
 on:
   push:
@@ -13,7 +12,22 @@ on:
     tags: ['v*']
 
 jobs:
-  build:
+  check:
+    name: Test & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install
+      - run: bun test
+      - run: bun run typecheck
+
+  publish:
+    name: Build & Push Docker Image
+    needs: check
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -30,10 +44,9 @@ jobs:
         with:
           images: ghcr.io/gpont/home-network-monitor
           tags: |
-            type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v6
