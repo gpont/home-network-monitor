@@ -18,6 +18,7 @@ import {
   tcpConnectResults,
   dnsExtraChecks,
   captivePortalChecks,
+  httpRedirectChecks,
   ntpChecks,
   osResolverChecks,
 } from "../db/schema.ts";
@@ -58,6 +59,7 @@ export function buildApiRoutes(db: BunSQLiteDatabase<any>) {
       latestCaptivePortal,
       latestNtp,
       latestOsResolver,
+      latestHttpRedirect,
       recentPings,
     ] = await Promise.all([
       // Latest ping per target
@@ -159,6 +161,9 @@ export function buildApiRoutes(db: BunSQLiteDatabase<any>) {
       // Latest OS resolver
       db.select().from(osResolverChecks).orderBy(desc(osResolverChecks.timestamp)).limit(1),
 
+      // Latest HTTP redirect check
+      db.select().from(httpRedirectChecks).orderBy(desc(httpRedirectChecks.timestamp)).limit(1),
+
       // Recent pings for stats (last 15 min)
       db.select().from(pingResults).where(gte(pingResults.timestamp, sinceMs(15))).orderBy(desc(pingResults.timestamp)).limit(500),
     ]);
@@ -195,6 +200,7 @@ export function buildApiRoutes(db: BunSQLiteDatabase<any>) {
       tcpConnect: latestTcpConnect[0] ?? null,
       dnsExtra: latestDnsExtra[0] ?? null,
       captivePortal: latestCaptivePortal[0] ?? null,
+      httpRedirect: latestHttpRedirect[0] ?? null,
       ntp: latestNtp[0] ?? null,
       osResolver: latestOsResolver[0]
         ? {

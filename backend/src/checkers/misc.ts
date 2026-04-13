@@ -280,10 +280,10 @@ export async function checkSslCert(host: string) {
       return { host, expiresAt, daysRemaining, status, timestamp: ts };
     }
 
-    // Fallback: use openssl to check cert
+    // Fallback: use openssl to check cert (pipe through x509 for consistent date format)
     const result = await spawn(
-      ["openssl", "s_client", "-connect", `${host}:443`, "-servername", host],
-      10000
+      ["bash", "-c", `echo | openssl s_client -connect ${host}:443 -servername ${host} 2>/dev/null | openssl x509 -noout -dates 2>/dev/null`],
+      12000
     );
 
     const notAfterMatch = result.stdout.match(/notAfter=(.+)/);

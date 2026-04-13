@@ -1,6 +1,7 @@
 import { db } from "../db/client.ts";
 import { dnsResults, dnsExtraChecks } from "../db/schema.ts";
 import { spawn, now } from "./utils.ts";
+import { parseResolvConf } from "./system.ts";
 
 export interface DnsServer {
   ip: string;
@@ -118,6 +119,16 @@ export function checkNxdomain(digOutput: string): "ok" | "fail" {
   return digOutput.includes("NXDOMAIN") ? "ok" : "fail";
 }
 
+/** Detects DNS leaks by comparing OS nameservers against configured DNS servers.
+ *  Loopback addresses (127.x, ::1) are ignored — they indicate a local resolver
+ *  like dnsmasq/unbound whose upstream we cannot inspect here. */
+export function checkDnsLeak(osNameservers: string[], configuredServers: string[]): "ok" | "leak" | "unknown" {
+  const external = osNameservers.filter(ns => !ns.startsWith("127.") && ns !== "::1" && !ns.startsWith("169.254."));
+  if (external.length === 0) return "unknown";
+  const configured = new Set(configuredServers);
+  return external.every(ns => configured.has(ns)) ? "ok" : "leak";
+}
+
 // one.one.one.one has two valid IPs: 1.1.1.1 and 1.0.0.1
 const CLOUDFLARE_ONE_IPS = new Set(["1.1.1.1", "1.0.0.1"]);
 
@@ -167,14 +178,22 @@ export async function checkDnsExtras(servers: Array<{ ip: string; label: string 
 
   const doh = await checkDoH();
 
+  // DNS leak: compare OS resolver against configured DNS servers
+  let dnsLeak: "ok" | "leak" | "unknown" = "unknown";
+  try {
+    const resolvConf = await Bun.file("/etc/resolv.conf").text();
+    const osNameservers = parseResolvConf(resolvConf);
+    dnsLeak = checkDnsLeak(osNameservers, servers.map(s => s.ip));
+  } catch { /* /etc/resolv.conf unavailable */ }
+
   await db.insert(dnsExtraChecks).values({
     consistency,
     nxdomain,
     hijacking,
     doh,
-    dnsLeak: "unknown",
+    dnsLeak,
     timestamp,
   });
 
-  return { consistency, nxdomain, hijacking, doh, dnsLeak: "unknown", timestamp };
+  return { consistency, nxdomain, hijacking, doh, dnsLeak, timestamp };
 }

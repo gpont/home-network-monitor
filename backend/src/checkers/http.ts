@@ -95,8 +95,8 @@ export async function checkCaptivePortal(): Promise<{ status: "clean" | "detecte
 export async function checkHttpRedirect(): Promise<{ status: "ok" | "intercepted" | "error" }> {
   const timestamp = Date.now();
   try {
-    // Follow redirects and check if we end up at https:// — works reliably across runtimes
-    const res = await fetch("http://www.google.com", {
+    // github.com reliably returns 301 → https:// (unlike google.com which serves HTTP directly)
+    const res = await fetch("http://github.com", {
       redirect: "follow",
       signal: AbortSignal.timeout(8000),
     });
