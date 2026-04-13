@@ -43,17 +43,13 @@ export async function checkMtu() {
 
   for (const size of sizes) {
     // -M do = don't fragment (Linux), -D = macOS
-    const linuxResult = await spawn(
-      ["ping", "-M", "do", "-c", "1", "-W", "2", "-s", String(size), "8.8.8.8"],
-      5000
-    );
-    const macResult = await spawn(
-      ["ping", "-D", "-c", "1", "-W", "2000", "-s", String(size), "8.8.8.8"],
-      5000
-    );
+    // -W on Linux = seconds, on macOS = milliseconds
+    const cmd = process.platform === "darwin"
+      ? ["ping", "-D", "-c", "1", "-W", "2000", "-s", String(size), "8.8.8.8"]
+      : ["ping", "-M", "do", "-c", "1", "-W", "2", "-s", String(size), "8.8.8.8"];
 
-    const success = linuxResult.exitCode === 0 || macResult.exitCode === 0;
-    if (success) {
+    const result = await spawn(cmd, 5000);
+    if (result.exitCode === 0) {
       maxOk = size + 28; // add IP+ICMP headers back
       break;
     }
