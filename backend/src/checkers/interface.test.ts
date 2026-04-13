@@ -35,9 +35,13 @@ describe("parseIpRouteOutput", () => {
 });
 
 describe("parseArpOutput", () => {
-  test("extracts MAC for known IP", () => {
+  test("extracts MAC for known IP (Linux format)", () => {
     const out = "192.168.1.1 ether aa:bb:cc:dd:ee:ff C eth0";
     expect(parseArpOutput("192.168.1.1", out)).toBe("aa:bb:cc:dd:ee:ff");
+  });
+  test("extracts MAC for known IP (macOS format)", () => {
+    const out = "? (192.168.1.1) at 9c:73:70:2a:e5:7f on en0 ifscope [ethernet]";
+    expect(parseArpOutput("192.168.1.1", out)).toBe("9c:73:70:2a:e5:7f");
   });
   test("returns null when IP not in table", () => {
     const out = "192.168.1.2 ether aa:bb:cc:dd:ee:ff C eth0";

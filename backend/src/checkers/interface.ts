@@ -27,7 +27,11 @@ export function parseIpRouteOutput(out: string): { gatewayIp: string | null; con
 
 export function parseArpOutput(ip: string, out: string): string | null {
   const escaped = ip.replace(/\./g, "\\.");
-  const m = out.match(new RegExp(`${escaped}\\s+ether\\s+([\\da-f:]+)`, "i"));
+  // Linux: "192.168.1.1 ether aa:bb:cc:dd:ee:ff ..."
+  // macOS: "? (192.168.1.1) at 9c:73:70:2a:e5:7f on en0 ..."
+  const m =
+    out.match(new RegExp(`${escaped}\\s+ether\\s+([\\da-f:]+)`, "i")) ??
+    out.match(new RegExp(`\\(${escaped}\\)\\s+at\\s+([\\da-f:]+)`, "i"));
   return m?.[1] ?? null;
 }
 
