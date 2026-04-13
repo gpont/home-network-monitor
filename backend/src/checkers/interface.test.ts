@@ -24,13 +24,17 @@ describe("parseIpAddrOutput", () => {
 });
 
 describe("parseIpRouteOutput", () => {
-  test("extracts default gateway", () => {
+  test("extracts default gateway and interface", () => {
     const out = "default via 192.168.1.1 dev eth0 proto dhcp";
-    expect(parseIpRouteOutput(out)).toEqual({ gatewayIp: "192.168.1.1", connectionType: "dhcp" });
+    expect(parseIpRouteOutput(out)).toEqual({ gatewayIp: "192.168.1.1", iface: "eth0", connectionType: "dhcp" });
   });
   test("detects PPPoE", () => {
     const out = "default via 10.0.0.1 dev ppp0 proto kernel";
     expect(parseIpRouteOutput(out).connectionType).toBe("pppoe");
+  });
+  test("returns null iface when no dev field", () => {
+    const out = "default via 192.168.1.1";
+    expect(parseIpRouteOutput(out).iface).toBeNull();
   });
 });
 

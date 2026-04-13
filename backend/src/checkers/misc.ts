@@ -282,7 +282,7 @@ export async function checkSslCert(host: string) {
 
     // Fallback: use openssl to check cert (pipe through x509 for consistent date format)
     const result = await spawn(
-      ["bash", "-c", `echo | openssl s_client -connect ${host}:443 -servername ${host} 2>/dev/null | openssl x509 -noout -dates 2>/dev/null`],
+      ["sh", "-c", `echo | openssl s_client -connect ${host}:443 -servername ${host} 2>/dev/null | openssl x509 -noout -dates 2>/dev/null`],
       12000
     );
 

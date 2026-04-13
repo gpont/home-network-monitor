@@ -14,13 +14,15 @@ export function parseIpAddrOutput(out: string): { ipv4: string | null; ipv6LinkL
   return { ipv4: v4?.[1] ?? null, ipv6LinkLocal: v6?.[1] ?? null };
 }
 
-export function parseIpRouteOutput(out: string): { gatewayIp: string | null; connectionType: "dhcp" | "pppoe" | "static" | "unknown" } {
+export function parseIpRouteOutput(out: string): { gatewayIp: string | null; iface: string | null; connectionType: "dhcp" | "pppoe" | "static" | "unknown" } {
   const m = out.match(/default via (\S+)/);
-  if (!m) return { gatewayIp: null, connectionType: "unknown" };
+  if (!m) return { gatewayIp: null, iface: null, connectionType: "unknown" };
   const pppoe = /ppp\d/.test(out);
   const dhcp = /dhcp/.test(out);
+  const devMatch = out.match(/dev\s+(\S+)/);
   return {
     gatewayIp: m[1] ?? null,
+    iface: devMatch?.[1] ?? null,
     connectionType: pppoe ? "pppoe" : dhcp ? "dhcp" : "static",
   };
 }
@@ -134,15 +136,18 @@ export async function checkInterface() {
 }
 
 async function checkInterfaceLinux(timestamp: number) {
-  const [linkOut, addrOut, routeOut] = await Promise.all([
-    spawn(["ip", "link", "show"], 3000),
-    spawn(["ip", "addr", "show"], 3000),
-    spawn(["ip", "route", "show", "default"], 3000),
+  const routeOut = await spawn(["ip", "route", "show", "default"], 3000);
+  const route = parseIpRouteOutput(routeOut.stdout);
+
+  // Use the interface from the default route to avoid picking virtual interfaces (tunl0, gre0, etc.)
+  const ifaceArg = route.iface ? [route.iface] : [];
+  const [linkOut, addrOut] = await Promise.all([
+    spawn(["ip", "link", "show", ...ifaceArg], 3000),
+    spawn(["ip", "addr", "show", ...ifaceArg], 3000),
   ]);
 
   const link = parseIpLinkOutput(linkOut.stdout);
   const addr = parseIpAddrOutput(addrOut.stdout);
-  const route = parseIpRouteOutput(routeOut.stdout);
 
   let gatewayMac: string | null = null;
   if (route.gatewayIp) {

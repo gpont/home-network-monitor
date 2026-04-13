@@ -24,12 +24,8 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Install backend dependencies (only production deps)
-# Build deps needed to compile lzma-native (used by speedtest-net) from source
 COPY package.json .npmrc ./
-RUN apk add --no-cache --virtual .build-deps python3 make g++ xz-dev && \
-    bun install --production && \
-    apk del .build-deps && \
-    apk add --no-cache xz-libs
+RUN bun install --production
 
 # Copy backend source
 COPY backend/src ./backend/src

@@ -119,14 +119,39 @@ export function checkNxdomain(digOutput: string): "ok" | "fail" {
   return digOutput.includes("NXDOMAIN") ? "ok" : "fail";
 }
 
+function isPrivateIp(ip: string): boolean {
+  return ip.startsWith("10.") ||
+    ip.startsWith("172.16.") || ip.startsWith("172.17.") || ip.startsWith("172.18.") ||
+    ip.startsWith("172.19.") || ip.startsWith("172.20.") || ip.startsWith("172.21.") ||
+    ip.startsWith("172.22.") || ip.startsWith("172.23.") || ip.startsWith("172.24.") ||
+    ip.startsWith("172.25.") || ip.startsWith("172.26.") || ip.startsWith("172.27.") ||
+    ip.startsWith("172.28.") || ip.startsWith("172.29.") || ip.startsWith("172.30.") ||
+    ip.startsWith("172.31.") ||
+    ip.startsWith("192.168.") ||
+    ip.startsWith("127.") ||
+    ip === "::1" ||
+    ip.startsWith("169.254.");
+}
+
 /** Detects DNS leaks by comparing OS nameservers against configured DNS servers.
- *  Loopback addresses (127.x, ::1) are ignored — they indicate a local resolver
- *  like dnsmasq/unbound whose upstream we cannot inspect here. */
+ *  - Loopback/link-local: always "unknown" (local resolver like dnsmasq/unbound/Docker)
+ *  - Private RFC1918 not in configured list: "unknown" (container/VM resolver, can't inspect)
+ *  - Public IP not in configured list: "leak" (actual DNS leak to ISP or unknown server)
+ */
 export function checkDnsLeak(osNameservers: string[], configuredServers: string[]): "ok" | "leak" | "unknown" {
-  const external = osNameservers.filter(ns => !ns.startsWith("127.") && ns !== "::1" && !ns.startsWith("169.254."));
-  if (external.length === 0) return "unknown";
   const configured = new Set(configuredServers);
-  return external.every(ns => configured.has(ns)) ? "ok" : "leak";
+  // Only consider nameservers that aren't loopback/link-local
+  const nonLocal = osNameservers.filter(ns => !ns.startsWith("127.") && ns !== "::1" && !ns.startsWith("169.254."));
+  if (nonLocal.length === 0) return "unknown";
+  // Check if any nameserver is a public IP not in configured list
+  const hasPublicLeak = nonLocal.some(ns => !isPrivateIp(ns) && !configured.has(ns));
+  if (hasPublicLeak) return "leak";
+  // All non-loopback nameservers are either configured or private (container/local resolver)
+  const allConfiguredOrPrivate = nonLocal.every(ns => configured.has(ns) || isPrivateIp(ns));
+  if (allConfiguredOrPrivate) {
+    return nonLocal.every(ns => configured.has(ns)) ? "ok" : "unknown";
+  }
+  return "unknown";
 }
 
 // one.one.one.one has two valid IPs: 1.1.1.1 and 1.0.0.1
