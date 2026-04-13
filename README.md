@@ -26,7 +26,7 @@ with 53 checks, automatic problem diagnosis, and fix instructions.
 
 ## Requirements
 
-- Linux server (x86_64)
+- Linux server (x86_64 or arm64)
 - Docker + Docker Compose
 
 ## Quick Start
@@ -112,6 +112,34 @@ bun test              # run all tests
 ```
 
 Backend dev server runs on port `3001`; the frontend Vite dev server proxies `/api` and `/ws` there.
+
+## Releasing a new version
+
+1. Make sure all tests pass:
+   ```bash
+   bun test && bun run typecheck
+   ```
+
+2. Commit your changes:
+   ```bash
+   git add -A && git commit -m "feat: your changes"
+   ```
+
+3. Create a version tag:
+   ```bash
+   git tag v1.2.0
+   ```
+
+4. Push with tags:
+   ```bash
+   git push origin master --tags
+   ```
+
+GitHub Actions will automatically build and push:
+- `ghcr.io/gpont/home-network-monitor:v1.2.0`
+- `ghcr.io/gpont/home-network-monitor:latest`
+
+Images are built for `linux/amd64` and `linux/arm64`. Monitor the build at [Actions](https://github.com/gpont/home-network-monitor/actions).
 
 ## Contributing
 
