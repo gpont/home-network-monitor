@@ -29,6 +29,18 @@ function pingFor(s: StatusResponse, target: string) {
   return s.ping.find(p => p.target === target || p.target.startsWith(target));
 }
 
+/** Returns true if mtu value is acceptable given the connection type.
+ *  PPPoE standard is 1492 (not 1500), so 1492 is ok for PPPoE connections. */
+function mtuIsOk(s: StatusResponse): boolean {
+  if (!s.mtu || s.mtu.status === "error") return false;
+  if (s.mtu.status === "ok") return true;
+  try {
+    const maxMtu: number = JSON.parse(s.mtu.value ?? "{}").maxMtu ?? 0;
+    const isPPPoE = s.interface?.connectionType === "pppoe";
+    return isPPPoE ? maxMtu >= 1492 : maxMtu >= 1500;
+  } catch { return false; }
+}
+
 function gwPing(s: StatusResponse) {
   // Gateway is the ping target with lowest RTT that is not 8.8.8.8/1.1.1.1/9.9.9.9
   return s.ping.find(p => !["8.8.8.8","1.1.1.1","9.9.9.9"].includes(p.target) && p.targetLabel?.toLowerCase().includes("router"));
@@ -224,9 +236,10 @@ export const CHECKS: CheckDefinition[] = [
     getStatus: s => {
       if (!s.mtu) return "unknown";
       if (isStale(s.mtu.timestamp, STALE.m15)) return "stale";
-      return s.mtu.status === "ok" ? "ok" : s.mtu.status === "fragmentation_detected" ? "warn" : "fail";
+      if (s.mtu.status === "error") return "fail";
+      return mtuIsOk(s) ? "ok" : "warn";
     },
-    getFix: s => s.mtu?.status === "fragmentation_detected" ? ["check.gw_mtu.fix.0", "check.gw_mtu.fix.1", "check.gw_mtu.fix.2", "check.gw_mtu.fix.3"] : null,
+    getFix: s => (!s.mtu || mtuIsOk(s)) ? null : ["check.gw_mtu.fix.0", "check.gw_mtu.fix.1", "check.gw_mtu.fix.2", "check.gw_mtu.fix.3"],
   },
   {
     id: "gw_jitter", layer: 2, name: "check.gw_jitter.name", description: "Нестабильность RTT до роутера < 5ms",
@@ -765,9 +778,10 @@ export const CHECKS: CheckDefinition[] = [
     getStatus: s => {
       if (!s.mtu) return "unknown";
       if (isStale(s.mtu.timestamp, STALE.m15)) return "stale";
-      return s.mtu.status === "ok" ? "ok" : s.mtu.status === "fragmentation_detected" ? "warn" : "fail";
+      if (s.mtu.status === "error") return "fail";
+      return mtuIsOk(s) ? "ok" : "warn";
     },
-    getFix: s => s.mtu?.status !== "ok" ? ["check.path_mtu.fix.0", "check.path_mtu.fix.1", "check.path_mtu.fix.2", "check.path_mtu.fix.3"] : null,
+    getFix: s => (!s.mtu || mtuIsOk(s)) ? null : ["check.path_mtu.fix.0", "check.path_mtu.fix.1", "check.path_mtu.fix.2", "check.path_mtu.fix.3"],
   },
   {
     id: "ipv6_global", layer: 7, name: "check.ipv6_global.name", description: "Глобальное IPv6 подключение работает",

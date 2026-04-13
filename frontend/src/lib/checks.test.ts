@@ -64,6 +64,39 @@ describe("CHECKS", () => {
   });
 });
 
+describe("gw_mtu PPPoE awareness", () => {
+  const ifacePPPoE = { interfaceName: "en0", status: "up" as const, ipv4: "192.168.1.254", ipv6LinkLocal: null, gatewayIp: "192.168.1.1", gatewayMac: "aa:bb:cc:dd:ee:ff", connectionType: "pppoe" as const, rxErrors: 0, txErrors: 0, rxDropped: 0, txDropped: 0, timestamp: Date.now() };
+  const ifaceDHCP = { ...ifacePPPoE, connectionType: "dhcp" as const };
+
+  const mtuCheck = CHECKS.find(c => c.id === "gw_mtu")!;
+  const pathMtuCheck = CHECKS.find(c => c.id === "path_mtu")!;
+
+  test("gw_mtu: ok for PPPoE with MTU 1492 (fragmentation_detected in DB)", () => {
+    const s = { ...emptyStatus(), interface: ifacePPPoE, mtu: { status: "fragmentation_detected", value: JSON.stringify({ maxMtu: 1492 }), timestamp: Date.now() } };
+    expect(mtuCheck.getStatus(s as any)).toBe("ok");
+  });
+  test("gw_mtu: warn for PPPoE with MTU 1460 (below 1492)", () => {
+    const s = { ...emptyStatus(), interface: ifacePPPoE, mtu: { status: "fragmentation_detected", value: JSON.stringify({ maxMtu: 1460 }), timestamp: Date.now() } };
+    expect(mtuCheck.getStatus(s as any)).toBe("warn");
+  });
+  test("gw_mtu: warn for DHCP with MTU 1492 (below 1500)", () => {
+    const s = { ...emptyStatus(), interface: ifaceDHCP, mtu: { status: "fragmentation_detected", value: JSON.stringify({ maxMtu: 1492 }), timestamp: Date.now() } };
+    expect(mtuCheck.getStatus(s as any)).toBe("warn");
+  });
+  test("gw_mtu: ok for DHCP with MTU 1500", () => {
+    const s = { ...emptyStatus(), interface: ifaceDHCP, mtu: { status: "ok", value: JSON.stringify({ maxMtu: 1500 }), timestamp: Date.now() } };
+    expect(mtuCheck.getStatus(s as any)).toBe("ok");
+  });
+  test("gw_mtu: no fix shown for PPPoE with MTU 1492", () => {
+    const s = { ...emptyStatus(), interface: ifacePPPoE, mtu: { status: "fragmentation_detected", value: JSON.stringify({ maxMtu: 1492 }), timestamp: Date.now() } };
+    expect(mtuCheck.getFix(s as any)).toBeNull();
+  });
+  test("path_mtu: ok for PPPoE with MTU 1492", () => {
+    const s = { ...emptyStatus(), interface: ifacePPPoE, mtu: { status: "fragmentation_detected", value: JSON.stringify({ maxMtu: 1492 }), timestamp: Date.now() } };
+    expect(pathMtuCheck.getStatus(s as any)).toBe("ok");
+  });
+});
+
 describe("LAYERS", () => {
   test("has 7 layers", () => {
     expect(LAYERS).toHaveLength(7);
