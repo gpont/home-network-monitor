@@ -432,7 +432,8 @@ export function buildApiRoutes(db: BunSQLiteDatabase<any>) {
       else if (type === "publicip") result = await checkPublicIp();
       return c.json({ ok: true, result });
     } catch (err) {
-      return c.json({ ok: false, error: String(err) }, 500);
+      // Check failed (network error, etc.) — not a server error, endpoint worked fine
+      return c.json({ ok: false, error: String(err) });
     } finally {
       runningChecks.delete(type);
     }
