@@ -89,7 +89,6 @@ Data is stored in `./data/` on the host — history is preserved across containe
 
 ```
 ghcr.io/gpont/home-network-monitor:latest
-ghcr.io/gpont/home-network-monitor:1.0.0
 ```
 
 The container requires `--cap-add NET_RAW` (ICMP ping) and `--network host` (gateway/traceroute detection on Linux).
